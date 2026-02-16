@@ -6,64 +6,65 @@ Reference: Fixation disparity curve error calculation is based on the model desc
 https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf
 
 Phase 1 — Web Application for Fixation Disparity Curves
-Goal
+
+Goal : 
 
 Create an interactive web app that:
 
-plots fixation disparity data,
+- plots fixation disparity data,
 
-approximates the data using four candidate polynomial curve models (Type 1–4),
+- approximates the data using four candidate polynomial curve models (Type 1–4),
 
-computes an error for each model,
+- computes an error for each model,
 
-selects the curve type with the lowest error, and
+- selects the curve type with the lowest error, and
 
-displays results clearly (graph + errors + classification).
+- displays results clearly (graph + errors + classification).
 
 Core Functional Requirements
 1) Data Input
 
-The x-values are fixed (predefined clinical stimulus values).
+- The x-values are fixed (predefined clinical stimulus values).
 
-The y-values are patient responses (clinical measurement results).
+- The y-values are patient responses (clinical measurement results).
 
-Each dataset consists of 7 (x, y) points:
+- Each dataset consists of 7 (x, y) points:
 
-7 fixed x inputs
+- 7 fixed x inputs
 
-7 corresponding y values entered/loaded for a patient
+- 7 corresponding y values entered/loaded for a patient
 
-The app must support providing these 7 y-values (e.g., form input, file input, or preset examples—implementation choice).
+- The app must support providing these 7 y-values (e.g., form input, file input, or preset examples—implementation choice).
 
 2) Curve Visualization (Graph)
 
-Display one graph containing four fitted curves, one per fixation disparity curve type:
+- Display one graph containing four fitted curves, one per fixation disparity curve type:
 
-Type 1, Type 2, Type 3, Type 4
+- Type 1, Type 2, Type 3, Type 4
 
-Each curve must be drawn using a distinct color for easy comparison.
+- Each curve must be drawn using a distinct color for easy comparison.
 
-The graph should also show the original 7 data points (patient responses) so that the user can visually compare the fit.
+- The graph should also show the original 7 data points (patient responses) so that the user can visually compare the fit.
 
-Graph must include:
+- Graph must include:
 
-axis labels (x = disparity stimulus, y = clinical response)
+- axis labels (x = disparity stimulus, y = clinical response)
 
-legend mapping color → curve type
+- legend mapping color → curve type
 
-consistent scaling (so fits are visually comparable)
+- consistent scaling (so fits are visually comparable)
 
 3) Mathematical Approximation Model (Classification)
 
-For each of the 4 curve types, the app must:
+- For each of the 4 curve types, the app must:
 
-fit a polynomial-based model to the 7 data points
+- fit a polynomial-based model to the 7 data points
 
-compute a numeric error value for that fitted model
+- compute a numeric error value for that fitted model
 
-The classification rule:
+- The classification rule:
 
-Predicted curve type = the type with the minimum error
+- Predicted curve type = the type with the minimum error
 
 Important note:
 
@@ -71,11 +72,11 @@ Polynomial degree and fitting approach must follow the definitions / constraints
 
 4) Error Computation + Output
 
-The app must compute four error values, one for each curve type.
+- The app must compute four error values, one for each curve type.
 
-The error calculation must follow the method described in the paper.
+- The error calculation must follow the method described in the paper.
 
-Under the graph, the UI must display:
+- Under the graph, the UI must display:
 
 Error(Type 1)
 
@@ -87,11 +88,11 @@ Error(Type 4)
 
 Also show:
 
-Final classification result (e.g., “Best fit: Type 2”)
+- Final classification result (e.g., “Best fit: Type 2”)
 
 (optional but useful) a small highlight/marker indicating which error is minimum
 
-UI / Design Requirements
+* UI / Design Requirements
 1) Layout
 
 Minimum expected layout:
