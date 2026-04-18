@@ -5,7 +5,7 @@ An interactive web application for fitting, visualizing and classifying **Fixati
 Reference paper (linked from `docs/`):
 <https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf>
 
-> This is **Phase 1** of the TFG (see [`docs/README.md`](docs/README.md)): an end-to-end web app that visualizes FDCs and classifies them into types T1–T4 via polynomial/nonlinear approximation and error comparison.
+> This is **Phase 1** of the TFG: an end-to-end web app that visualizes FDCs and classifies them into types T1–T4 via polynomial/nonlinear approximation and error comparison.
 
 ---
 
@@ -301,15 +301,15 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -
 - **Frontend lint**: `npm run lint` (ESLint flat config in `frontend/eslint.config.js` extending `@eslint/js` recommended, `typescript-eslint` recommended, `eslint-plugin-react-hooks` recommended-latest, `eslint-plugin-react-refresh/vite`; ignores `dist`).
 - **Frontend type-check**: executed as part of `npm run build` (`tsc -b` against the project-reference setup in `tsconfig.json` → `tsconfig.app.json` + `tsconfig.node.json`, both with `strict: true`, `noUnusedLocals`, `noUnusedParameters`).
 - **Formatter**: no Prettier configuration found in the repo.
-- **Tests**: **no test suite is present** (no `tests/`, no `vitest`/`jest`/`pytest` config, no test files). *Not found in repository.*
-- **Coverage**: *not found in repository.*
+- **Tests**: **no test suite is present** (no `tests/`, no `vitest`/`jest`/`pytest` config, no test files). *Not available.*
+- **Coverage**: *not available*
 
 ---
 
 ## Deployment
 
 - No `Dockerfile`, no `docker-compose*.yml`, no Kubernetes manifests, no `.github/workflows/`, no `.gitlab-ci.yml`. Deployment tooling is **not included in this repository** — *needs manual confirmation* with the project maintainer.
-- For a minimal self-hosted deployment you would typically:
+- For a minimal self-hosted deployment typically below is one way to do it :
   1. Build the SPA: `npm run build` (output in `frontend/dist/`).
   2. Serve `frontend/dist/` from any static host / reverse proxy.
   3. Run `uvicorn app.main:app --host 0.0.0.0 --port 8000` behind the same reverse proxy, forwarding `/api/*` to it.
@@ -332,7 +332,7 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -
 
 ## Project status / what is not in the repo
 
-The repository is focused on Phase 1 (see `docs/README.md`). The following are **not** present and are noted here so they are not assumed:
+The following are **not** present and are noted here so they are not assumed:
 
 - No `.env` / `.env.example` / any runtime configuration via environment variables.
 - No automated tests, coverage tooling, or CI workflows.
