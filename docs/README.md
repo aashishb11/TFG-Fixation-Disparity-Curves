@@ -1,142 +1,344 @@
-This TFG is split into two phases. The first phase focuses on building a web application to visualize Fixation Disparity Curves (FDC) and automatically classify the curve into one of four curve types using polynomial approximation and error comparison.
+# Fixation Disparity Curve (FDC) Modeling — TFG
+
+An interactive web application for fitting, visualizing and classifying **Fixation Disparity Curves** from clinical measurements. Given 7 patient responses at fixed stimulus positions, the app fits four curve models (Type I–IV), reports per-model error metrics (SSE, RMSE) and a paper-defined slope, and selects the best-fitting curve type.
+
+Reference paper (linked from `docs/`):
+<https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf>
+
+> This is **Phase 1** of the TFG (see [`docs/README.md`](docs/README.md)): an end-to-end web app that visualizes FDCs and classifies them into types T1–T4 via polynomial/nonlinear approximation and error comparison.
+
+---
+
+## Table of contents
+
+- [Overview](#overview)
+- [Tech stack](#tech-stack)
+- [Features](#features)
+- [Repository structure](#repository-structure)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Running the project](#running-the-project)
+- [Scripts](#scripts)
+- [API](#api)
+- [Architecture](#architecture)
+- [Linting, formatting, testing](#linting-formatting-testing)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Project status / what is not in the repo](#project-status--what-is-not-in-the-repo)
+
+---
+
+## Overview
+
+Given 7 measured y-values at the fixed x positions `[-15, -10, -5, 0, 5, 10, 15]`, the backend fits four candidate models:
+
+| Model | Equation (fitted by GEKKO) |
+|-------|-----------------------------|
+| T1    | `y = a + b · (x − c)^3`                    |
+| T2    | `y = a + b · exp(−c · (x − d))`            |
+| T3    | `y = a − b · exp(c · (x − d))`             |
+| T4    | `y = a − b · arctan(c · (x − d))`          |
+
+For every model it returns: fitted parameters, SSE, RMSE, slope defined as `|f(3) − f(−3)| / 6` (the paper's definition), a dense curve for plotting, and the values of the fit evaluated at the original x positions. A classification block reports `best_by_sse` and `best_by_rmse`.
+
+The frontend renders the four fitted curves + the 7 measured points on a single chart (Recharts), shows a classification card (best fit, slope, fixation disparity at x=0, and the associated phoria — the smallest non-zero x where the best curve crosses y=0), and offers a high-resolution PNG export.
+
+---
+
+## Tech stack
+
+**Backend**
+- Python + [FastAPI 0.129.2](https://fastapi.tiangolo.com/)
+- [Pydantic 2.12.5](https://docs.pydantic.dev/) for request validation
+- [NumPy 2.4.2](https://numpy.org/)
+- [GEKKO 1.3.2](https://gekko.readthedocs.io/) for constrained nonlinear fitting
+- [Uvicorn 0.41.0](https://www.uvicorn.org/) as the ASGI server
+
+**Frontend**
+- [React 19.2](https://react.dev/) + [TypeScript 5.9](https://www.typescriptlang.org/)
+- [Vite 7.3](https://vitejs.dev/) (dev server, bundler, proxy)
+- [Recharts 3.7](https://recharts.org/) for the curve/scatter chart
+- ESLint 9 with `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`
+
+---
+
+## Features
+
+All items below correspond to code actually present in the repo:
+
+- **7-point input panel** with clinical presets for viewing distances **40 cm** and **25 cm**, plus a free-form **Other** option with a custom-distance field (`frontend/src/components/InputPanel.tsx`, `frontend/src/constants/fdc.ts`).
+- **Nonlinear curve fitting** of four FDC models with per-model parameter constraints solved by GEKKO (`backend/app/services/fdc_fit.py`).
+- **Error metrics** per model: SSE and RMSE, plus a **paper-defined slope** `|f(3) − f(−3)| / 6`.
+- **Automatic classification** by both SSE and RMSE (`best_by_sse`, `best_by_rmse`).
+- **Composed chart** (Recharts) with 4 colored curves, 7 scatter points, reference lines at `x=0` and `y=0`, and fixed axis domain `[-20, 20]` (`frontend/src/components/CurveChart.tsx`).
+- **Classification card** surfacing best fit, slope, fixation disparity (y at x=0), and associated phoria (`frontend/src/components/ClassificationCard.tsx`, `frontend/src/lib/clinicalSummary.ts`).
+- **Collapsible advanced metrics table** highlighting the best-by-SSE row (`frontend/src/components/AdvancedMetricsSection.tsx`, `MetricsTable.tsx`).
+- **High-resolution PNG export** of the chart (2× scale, `#f8fbfd` background) via `frontend/src/lib/exportChart.ts`.
+- **UPC branding** in the page header (`frontend/images/UPC_Logo.png`).
+- **Race-safe recomputation**: a version counter in `App.tsx` discards stale responses when inputs change mid-request.
+
+---
+
+## Repository structure
+
+```
+TFG/
+├── backend/
+│   ├── app/
+│   │   ├── main.py                  # FastAPI app, CORS, routes
+│   │   └── services/
+│   │       └── fdc_fit.py           # GEKKO fitting, SSE/RMSE/slope
+│   └── requirements.txt             # Pinned Python deps
+├── frontend/
+│   ├── images/UPC_Logo.png          # Header logo
+│   ├── public/vite.svg
+│   ├── src/
+│   │   ├── api/fdc.ts               # computeFits() — POST /api/v1/compute
+│   │   ├── components/
+│   │   │   ├── AdvancedMetricsSection.tsx
+│   │   │   ├── ClassificationCard.tsx
+│   │   │   ├── CurveChart.tsx
+│   │   │   ├── InputPanel.tsx
+│   │   │   ├── MetricsTable.tsx
+│   │   │   └── PageHeader.tsx
+│   │   ├── constants/fdc.ts         # Fixed x, presets, colors, labels
+│   │   ├── lib/
+│   │   │   ├── chart.ts             # mergeModelCurves()
+│   │   │   ├── clinicalSummary.ts   # FD at x=0, associated phoria
+│   │   │   ├── exportChart.ts       # SVG → PNG export
+│   │   │   └── input.ts             # Validation helpers
+│   │   ├── types/fdc.ts             # Shared TS types
+│   │   ├── App.tsx                  # Root component, orchestration
+│   │   └── main.tsx                 # ReactDOM entry
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig*.json
+│   ├── vite.config.ts               # /api → http://localhost:8000
+│   └── eslint.config.js
+└── docs/
+    ├── README.md                    # Phase 1 requirements
+    ├── Requirements.pdf
+    ├── model-and-errors.md          # (empty)
+    └── references/                  # Reference paper
+```
 
-The app should also display the calculated errors for each curve type, based on the methodology described in the referenced paper.
+---
 
-Reference: Fixation disparity curve error calculation is based on the model described in the paper (see documentation):
-https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf
+## Prerequisites
 
-Phase 1 — Web Application for Fixation Disparity Curves
+- **Python**: not explicitly pinned in the repo (no `pyproject.toml` / runtime constraint in `requirements.txt`). The pinned dependency versions (e.g. `numpy==2.4.2`, `pydantic==2.12.5`) require a recent Python — **Python 3.11+** is recommended; *needs manual confirmation*.
+- **Node.js**: no explicit engines field in `frontend/package.json`. `@types/node ^24.x` and `vite ^7.3.1` imply **Node.js 20.19+ or 22.12+** (Vite 7's documented requirement); *needs manual confirmation for the exact minor version*.
+- **npm**: ships with Node. No lock file other than `package-lock.json` is present (no pnpm/yarn lock), so **npm** is the expected package manager.
+- **OS-level build tooling for GEKKO** may be required on some platforms. If `pip install gekko` fails, consult the GEKKO documentation; *not documented in this repository*.
+- **Database**: none. The app is stateless.
+- **External services**: none.
 
-Goal : 
+---
 
-Create an interactive web app that:
+## Installation
 
-- plots fixation disparity data,
+Clone the repository and install the two sides independently.
 
-- approximates the data using four candidate polynomial curve models (Type 1–4),
+### 1. Backend
 
-- computes an error for each model,
+```bash
+cd backend
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
 
-- selects the curve type with the lowest error, and
+pip install -r requirements.txt
+```
 
-- displays results clearly (graph + errors + classification).
+### 2. Frontend
 
-Core Functional Requirements
-1) Data Input
+```bash
+cd frontend
+npm install
+```
 
-- The x-values are fixed (predefined clinical stimulus values).
+### Environment variables
 
-- The y-values are patient responses (clinical measurement results).
+**No environment variables are defined or consumed in the repository.** The backend origin is hardcoded to `http://localhost:5173` (CORS) in `backend/app/main.py`, and the frontend dev proxy is hardcoded to `http://localhost:8000` in `frontend/vite.config.ts`. There is no `.env.example` to copy.
 
-- Each dataset consists of 7 (x, y) points:
+---
 
-- 7 fixed x inputs
+## Running the project
 
-- 7 corresponding y values entered/loaded for a patient
+The app is designed for local development. There is **no production deployment configuration** in the repository (no Dockerfile, no compose file, no CI). Run the two processes in separate terminals.
 
-- The app must support providing these 7 y-values (e.g., form input, file input, or preset examples—implementation choice).
+### Backend (dev)
 
-2) Curve Visualization (Graph)
+From the `backend/` directory, with the virtualenv activated:
 
-- Display one graph containing four fitted curves, one per fixation disparity curve type:
+```bash
+uvicorn app.main:app --reload --port 8000
+```
 
-- Type 1, Type 2, Type 3, Type 4
+The API becomes available at `http://localhost:8000`. Interactive docs are served by FastAPI at:
 
-- Each curve must be drawn using a distinct color for easy comparison.
+- Swagger UI: <http://localhost:8000/docs>
+- ReDoc:      <http://localhost:8000/redoc>
 
-- The graph should also show the original 7 data points (patient responses) so that the user can visually compare the fit.
+### Frontend (dev)
 
-- Graph must include:
+From the `frontend/` directory:
 
-- axis labels (x = disparity stimulus, y = clinical response)
+```bash
+npm run dev
+```
 
-- legend mapping color → curve type
+The Vite dev server starts (default `http://localhost:5173`). Requests to `/api/*` are proxied to `http://localhost:8000` per `vite.config.ts`, so the backend must also be running.
 
-- consistent scaling (so fits are visually comparable)
+### Frontend (production build / preview)
 
-3) Mathematical Approximation Model (Classification)
+```bash
+npm run build      # type-check with tsc -b, then vite build into frontend/dist
+npm run preview    # preview the built output locally
+```
 
-- For each of the 4 curve types, the app must:
+> Note: the preview server does **not** proxy `/api` — in a real deployment you must host the built SPA behind a web server/reverse proxy that forwards `/api/*` to the FastAPI backend. *Not included in this repository.*
 
-- fit a polynomial-based model to the 7 data points
+---
 
-- compute a numeric error value for that fitted model
+## Scripts
 
-- The classification rule:
+All scripts declared in `frontend/package.json`:
 
-- Predicted curve type = the type with the minimum error
+| Script          | Command            | Purpose                                              |
+|-----------------|--------------------|------------------------------------------------------|
+| `npm run dev`   | `vite`             | Start the Vite dev server with HMR on port 5173.     |
+| `npm run build` | `tsc -b && vite build` | Project-reference type-check then production build. |
+| `npm run lint`  | `eslint .`         | Lint the frontend sources.                           |
+| `npm run preview` | `vite preview`   | Serve the production build locally.                  |
 
-Important note:
+The backend has **no script manifest** (no Makefile, no `pyproject.toml` scripts). Use `uvicorn` directly as shown above.
 
-Polynomial degree and fitting approach must follow the definitions / constraints in the documentation (paper).
+---
 
-4) Error Computation + Output
+## API
 
-- The app must compute four error values, one for each curve type.
+Base URL: `http://localhost:8000` (direct) or `/api/...` via the Vite proxy.
 
-- The error calculation must follow the method described in the paper.
+### `GET /api/v1/health`
 
-- Under the graph, the UI must display:
+Health probe.
 
-Error(Type 1)
+```json
+200 OK
+{ "status": "ok" }
+```
 
-Error(Type 2)
+### `POST /api/v1/compute`
 
-Error(Type 3)
+Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -10, -5, 0, 5, 10, 15]`.
 
-Error(Type 4)
+**Request body** (`application/json`):
 
-Also show:
+```json
+{ "y": [y1, y2, y3, y4, y5, y6, y7] }
+```
 
-- Final classification result (e.g., “Best fit: Type 2”)
+- `y` must contain **exactly 7** finite floats (validated by Pydantic `conlist(float, min_length=7, max_length=7)` and the fitter). Anything else returns `400`.
 
-(optional but useful) a small highlight/marker indicating which error is minimum
+**Response 200** (shape — see `backend/app/services/fdc_fit.py` and `frontend/src/types/fdc.ts`):
 
-* UI / Design Requirements
-1) Layout
+```json
+{
+  "x": [-15, -10, -5, 0, 5, 10, 15],
+  "measured": [{ "x": -15, "y": ... }, ...],
+  "models": {
+    "T1": {
+      "params": { "a": 0.0, "b": 0.0, "c": 0.0 },
+      "sse": 0.0,
+      "rmse": 0.0,
+      "slope": 0.0,
+      "fitted_at_x": [ ... 7 floats ... ],
+      "curve": [ { "x": ..., "y": ... }, ... ]
+    },
+    "T2": { "params": { "a": 0, "b": 0, "c": 0, "d": 0 }, ... },
+    "T3": { "params": { "a": 0, "b": 0, "c": 0, "d": 0 }, ... },
+    "T4": { "params": { "a": 0, "b": 0, "c": 0, "d": 0 }, ... }
+  },
+  "classification": {
+    "best_by_sse":  "T1|T2|T3|T4",
+    "best_by_rmse": "T1|T2|T3|T4"
+  }
+}
+```
 
-Minimum expected layout:
+**Errors**
+- `400 Bad Request` — raised for validation failures from `fit_all_models` (wrong number of values, non-finite values). The body is `{ "detail": "..." }`.
+- `500 Internal Server Error` — any other exception bubbled up from GEKKO/NumPy is wrapped as `{ "detail": "Computation failed: ..." }`.
 
-Patient input section (7 y-values)
+---
 
-Graph section (4 curves + points)
+## Architecture
 
-Error results section (4 errors + predicted type)
+```
+┌────────────────────┐        POST /api/v1/compute         ┌──────────────────────┐
+│  React SPA (Vite)  │  ─────────────────────────────────► │  FastAPI (uvicorn)   │
+│  localhost:5173    │   proxy /api → localhost:8000       │  localhost:8000      │
+│                    │ ◄────────────────────────────────── │                      │
+└─────────┬──────────┘        JSON { models, ... }         └──────────┬───────────┘
+          │                                                           │
+          │ Recharts                                                  │ GEKKO solves
+          ▼                                                           ▼
+   Composed chart + metrics table + classification          Four constrained NLP
+   + PNG export                                             fits → SSE/RMSE/slope
+```
 
-2) Theme / Branding
+- The frontend is a **single-page app** with component-local React state (`useState`, `useMemo`, `useRef`). There is no global store (no Redux, no Context).
+- The backend is a **pure function wrapped in HTTP** — no database, no auth, no sessions. Each request rebuilds four independent GEKKO models and solves them.
+- CORS is configured in `backend/app/main.py` to accept **only** `http://localhost:5173`. For any other origin, adjust `allow_origins` accordingly.
 
-The web app should follow a UPC-inspired design:
+---
 
-use UPC-like color palette, typography, and overall style
+## Linting, formatting, testing
 
-clean academic / institutional look
+- **Frontend lint**: `npm run lint` (ESLint flat config in `frontend/eslint.config.js` extending `@eslint/js` recommended, `typescript-eslint` recommended, `eslint-plugin-react-hooks` recommended-latest, `eslint-plugin-react-refresh/vite`; ignores `dist`).
+- **Frontend type-check**: executed as part of `npm run build` (`tsc -b` against the project-reference setup in `tsconfig.json` → `tsconfig.app.json` + `tsconfig.node.json`, both with `strict: true`, `noUnusedLocals`, `noUnusedParameters`).
+- **Formatter**: no Prettier configuration found in the repo.
+- **Tests**: **no test suite is present** (no `tests/`, no `vitest`/`jest`/`pytest` config, no test files). *Not found in repository.*
+- **Coverage**: *not found in repository.*
 
-Exact theme details can be refined later (Phase 1 should still implement a consistent design baseline).
+---
 
-Phase 1 Deliverables
+## Deployment
 
-By the end of Phase 1, the repository should contain:
+- No `Dockerfile`, no `docker-compose*.yml`, no Kubernetes manifests, no `.github/workflows/`, no `.gitlab-ci.yml`. Deployment tooling is **not included in this repository** — *needs manual confirmation* with the project maintainer.
+- For a minimal self-hosted deployment you would typically:
+  1. Build the SPA: `npm run build` (output in `frontend/dist/`).
+  2. Serve `frontend/dist/` from any static host / reverse proxy.
+  3. Run `uvicorn app.main:app --host 0.0.0.0 --port 8000` behind the same reverse proxy, forwarding `/api/*` to it.
+  4. Update `allow_origins` in `backend/app/main.py` to include the real frontend origin.
 
-Fully working web app
+  The steps above are not codified anywhere in the repo.
 
-Curve fitting + classification logic for Type 1–4
+---
 
-Error computation based on the referenced method
+## Troubleshooting
 
-Graph showing:
+- **Frontend cannot reach the API / 404 on `/api/v1/compute`.** Make sure the backend is running on `http://localhost:8000`. The Vite proxy is hardcoded to that URL in `frontend/vite.config.ts`; if you change the backend port you must update the proxy.
+- **CORS error in the browser.** The backend only allows `http://localhost:5173`. If you run the frontend on a different port (e.g. `vite --port 5174`), edit the `allow_origins` list in `backend/app/main.py`.
+- **`GEKKO` install/solve errors.** GEKKO ships a platform-specific solver binary; pip installs that are incompatible with your OS/arch will fail at install or first call. Confirm your Python version and architecture match a published wheel.
+- **`400 Expected exactly 7 y values` / `All y values must be finite numbers`.** The backend validates both the length and finiteness of the `y` array. Fill all 7 fields and avoid empty/NaN/Infinity values.
+- **Stale computation shown after changing inputs.** The SPA uses a version counter to discard stale responses; if you still see one, rerun the fit. Changing the viewing distance resets the computed results by design.
+- **Port 8000 or 5173 already in use.** Stop the conflicting process or pass `--port` to `uvicorn` / `vite` (then update the matching hardcoded origin / proxy).
 
-7 measured points
+---
 
-4 fitted curves
+## Project status / what is not in the repo
 
-Results display:
+The repository is focused on Phase 1 (see `docs/README.md`). The following are **not** present and are noted here so they are not assumed:
 
-errors + predicted type
+- No `.env` / `.env.example` / any runtime configuration via environment variables.
+- No automated tests, coverage tooling, or CI workflows.
+- No Docker/container configuration.
+- No authentication, authorization, persistence, or per-patient storage — every request is stateless.
+- No explicit Python version pin in `backend/requirements.txt`.
+- `docs/model-and-errors.md` is currently empty.
 
-Documentation:
-
-how to run locally
-
-how inputs work
-
-what the classification output means
+Contributions and clarifications on the above are welcome — when in doubt, prefer editing the existing files over introducing new tooling, and keep the hardcoded dev ports (`5173`, `8000`) consistent across both sides.
