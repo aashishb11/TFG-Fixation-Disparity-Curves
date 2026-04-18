@@ -94,8 +94,8 @@ export const MODEL_CHART_LABELS: Record<ModelKey, string> = {
 };
 
 export const MODEL_COLORS: Record<ModelKey, string> = {
-  T1: "#e63946",
-  T2: "#457b9d",
-  T3: "#2a9d8f",
-  T4: "#a8dadc",
+  T1: "#b86b79",
+  T2: "#2f6ea5",
+  T3: "#4f9089",
+  T4: "#8fb4c8",
 };

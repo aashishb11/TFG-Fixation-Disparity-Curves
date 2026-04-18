@@ -18,14 +18,16 @@ import type {
 
 export default function App() {
   const computationVersionRef = useRef(0);
+  const emptyYValues = useMemo(
+    () => Array(FIXED_X_VALUES.length).fill(""),
+    [],
+  );
   const [viewingDistance, setViewingDistance] = useState<ViewingDistance | "">(
     "",
   );
   const [customDistance, setCustomDistance] = useState("");
   const [customDistanceTouched, setCustomDistanceTouched] = useState(false);
-  const [yValues, setYValues] = useState<string[]>(
-    () => Array(FIXED_X_VALUES.length).fill(""),
-  );
+  const [yValues, setYValues] = useState<string[]>(() => emptyYValues);
   const [response, setResponse] = useState<ComputeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,7 +60,10 @@ export default function App() {
       setYValues(
         getPresetValuesForFixedX(nextDistance as PresetViewingDistance),
       );
+      return;
     }
+
+    setYValues(emptyYValues);
   };
 
   const handleCustomDistanceChange = (value: string) => {
@@ -123,7 +128,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <PageHeader canExport={Boolean(response)} onExport={handleExport} />
+      <PageHeader />
 
       <div className="app-body">
         <InputPanel
@@ -148,9 +153,11 @@ export default function App() {
           </section>
 
           <CurveChart
+            canExport={Boolean(response)}
             chartRef={chartRef}
             data={mergedCurve}
             measured={response?.measured ?? []}
+            onExport={handleExport}
           />
         </main>
       </div>

@@ -1,9 +1,26 @@
 :root {
+  --color-page-bg: #edf4f8;
+  --color-surface-primary: #f8fbfd;
+  --color-surface-secondary: #f3f7fa;
+  --color-surface-elevated: #fbfdff;
+  --color-border: #c9d8e4;
+  --color-border-soft: #dbe6ee;
+  --color-text-primary: #18324a;
+  --color-text-secondary: #5c7288;
+  --color-text-muted: #7b8fa1;
+  --color-accent: #2f6ea5;
+  --color-accent-hover: #255a89;
+  --color-accent-soft: #e3f0fa;
+  --color-accent-soft-text: #2b5f8a;
+  --color-error: #b2606d;
+  --shadow-soft: 0 12px 30px rgba(24, 50, 74, 0.05);
+  --shadow-subtle: 0 10px 24px rgba(24, 50, 74, 0.045);
+
   font-family: "Inter", "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #212529;
-  background: #eef2f6;
+  color: var(--color-text-primary);
+  background: var(--color-page-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,6 +42,7 @@ body,
 body {
   margin: 0;
   min-width: 320px;
+  background: var(--color-page-bg);
 }
 
 button,
