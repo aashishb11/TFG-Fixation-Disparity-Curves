@@ -1,5 +1,10 @@
 import type { ViewingDistance } from "../types/fdc";
 
+/**
+ * Tagged-union result type used throughout the validation layer.
+ * `ok: true` carries the parsed values; `ok: false` carries user-facing error
+ * info so callers never need to inspect raw exceptions.
+ */
 type ParseYValuesResult =
   | { ok: true; values: number[] }
   | { ok: false; error: string };
@@ -12,6 +17,11 @@ type ViewingDistanceValidationResult =
       message: string;
     };
 
+/**
+ * Validates that a viewing distance has been selected and, when "other" is
+ * chosen, that the custom distance field is non-empty. Returns the failing
+ * field name so the UI can focus or highlight the right input.
+ */
 export function validateViewingDistance(
   viewingDistance: ViewingDistance | "",
   customDistance: string,
@@ -35,6 +45,10 @@ export function validateViewingDistance(
   return { ok: true };
 }
 
+/**
+ * Converts the 7 string inputs to `number[]` and rejects any value that
+ * isn't a finite number (empty strings, "NaN", "Infinity", etc.).
+ */
 export function parseYValues(yValues: string[]): ParseYValuesResult {
   const parsed = yValues.map((value) => Number(value));
 

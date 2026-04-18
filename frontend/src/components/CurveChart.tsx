@@ -31,9 +31,13 @@ import {
   MODEL_KEYS,
 } from "../constants/fdc";
 import { getPatientLimitMarkers } from "../lib/chartAnnotations";
+import {
+  areHoverSnapshotsEqual,
+  getHoverSnapshotFromX,
+  pixelRatioToAxisX,
+} from "../lib/chartHover";
 import { ExportMenu } from "./ExportMenu";
-import type { HoverSnapshot } from "./HoverReadoutPanel";
-import type { MergedCurvePoint, ModelKey, Point } from "../types/fdc";
+import type { HoverSnapshot, MergedCurvePoint, ModelKey, Point } from "../types/fdc";
 
 type CurveChartProps = {
   bestModel: ModelKey | null;
@@ -45,159 +49,6 @@ type CurveChartProps = {
   onExportPng: () => void;
   onHoverSnapshotChange?: (snapshot: HoverSnapshot | null) => void;
 };
-const CLINICAL_EPSILON = 0.0001;
-const MEASURED_HOVER_THRESHOLD = 0.45;
-const MEASURED_POINT_SNAP_THRESHOLD = 0.9;
-
-function areHoverSnapshotsEqual(
-  current: HoverSnapshot | null,
-  next: HoverSnapshot | null,
-): boolean {
-  if (current === next) {
-    return true;
-  }
-
-  if (current === null || next === null) {
-    return false;
-  }
-
-  if (current.x !== next.x || current.measuredValue !== next.measuredValue) {
-    return false;
-  }
-
-  return MODEL_KEYS.every(
-    (modelKey) => current.modelValues[modelKey] === next.modelValues[modelKey],
-  );
-}
-
-function getMeasuredValueAtX(
-  measured: Point[],
-  xValue: number,
-): number | null {
-  return measured.find(
-    (point) => Math.abs(point.x - xValue) <= MEASURED_HOVER_THRESHOLD,
-  )
-    ?.y ?? null;
-}
-
-function getNearestMeasuredPoint(
-  measured: Point[],
-  xValue: number,
-): Point | null {
-  let nearestPoint: Point | null = null;
-  let nearestDistance = Number.POSITIVE_INFINITY;
-
-  measured.forEach((point) => {
-    const distance = Math.abs(point.x - xValue);
-
-    if (distance < nearestDistance) {
-      nearestPoint = point;
-      nearestDistance = distance;
-    }
-  });
-
-  return nearestDistance <= MEASURED_POINT_SNAP_THRESHOLD ? nearestPoint : null;
-}
-
-function interpolateValue(
-  startY: number,
-  endY: number,
-  ratio: number,
-): number {
-  return startY + (endY - startY) * ratio;
-}
-
-function getHoverSnapshotFromX(
-  xValue: number,
-  data: MergedCurvePoint[],
-  measured: Point[],
-): HoverSnapshot | null {
-  const snappedMeasuredPoint = getNearestMeasuredPoint(measured, xValue);
-  const effectiveXValue = snappedMeasuredPoint?.x ?? xValue;
-
-  if (!Number.isFinite(effectiveXValue) || data.length === 0) {
-    return null;
-  }
-
-  const firstPoint = data[0];
-  const lastPoint = data[data.length - 1];
-
-  if (
-    firstPoint === undefined ||
-    lastPoint === undefined ||
-    effectiveXValue < firstPoint.x ||
-    effectiveXValue > lastPoint.x
-  ) {
-    return null;
-  }
-
-  const exactPoint = data.find(
-    (point) => Math.abs(point.x - effectiveXValue) <= CLINICAL_EPSILON,
-  );
-
-  if (exactPoint !== undefined) {
-    const exactModelValues = MODEL_KEYS.reduce(
-      (snapshot, modelKey) => {
-        snapshot[modelKey] = exactPoint[modelKey];
-        return snapshot;
-      },
-      {} as Partial<Record<ModelKey, number>>,
-    );
-
-    return {
-      x: exactPoint.x,
-      measuredValue:
-        snappedMeasuredPoint?.y ?? getMeasuredValueAtX(measured, exactPoint.x),
-      modelValues: exactModelValues,
-    };
-  }
-
-  let lowerPoint: MergedCurvePoint | undefined;
-  let upperPoint: MergedCurvePoint | undefined;
-
-  for (let index = 0; index < data.length - 1; index += 1) {
-    const currentPoint = data[index];
-    const nextPoint = data[index + 1];
-
-    if (
-      currentPoint !== undefined &&
-      nextPoint !== undefined &&
-      currentPoint.x <= effectiveXValue &&
-      nextPoint.x >= effectiveXValue
-    ) {
-      lowerPoint = currentPoint;
-      upperPoint = nextPoint;
-      break;
-    }
-  }
-
-  if (lowerPoint === undefined || upperPoint === undefined) {
-    return null;
-  }
-
-  const span = upperPoint.x - lowerPoint.x;
-  const ratio = span === 0 ? 0 : (effectiveXValue - lowerPoint.x) / span;
-
-  const modelValues = MODEL_KEYS.reduce((snapshot, modelKey) => {
-    snapshot[modelKey] = interpolateValue(
-      lowerPoint[modelKey],
-      upperPoint[modelKey],
-      ratio,
-    );
-    return snapshot;
-  }, {} as Partial<Record<ModelKey, number>>);
-
-  if (Object.keys(modelValues).length === 0) {
-    return null;
-  }
-
-  return {
-    x: effectiveXValue,
-    measuredValue:
-      snappedMeasuredPoint?.y ?? getMeasuredValueAtX(measured, effectiveXValue),
-    modelValues,
-  };
-}
 
 function PlotHoverLayer({
   data,
@@ -220,8 +71,7 @@ function PlotHoverLayer({
     const rect = event.currentTarget.getBoundingClientRect();
     const relativeX = event.clientX - rect.left;
     const clampedRatio = Math.max(0, Math.min(1, relativeX / rect.width));
-    const xValue =
-      AXIS_DOMAIN[0] + clampedRatio * (AXIS_DOMAIN[1] - AXIS_DOMAIN[0]);
+    const xValue = pixelRatioToAxisX(clampedRatio);
 
     onHoverChange(getHoverSnapshotFromX(xValue, data, measured));
   };
