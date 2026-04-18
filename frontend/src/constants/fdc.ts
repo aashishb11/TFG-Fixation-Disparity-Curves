@@ -79,23 +79,22 @@ export function getPresetValuesForFixedX(
 
 export const MODEL_KEYS: readonly ModelKey[] = ["T1", "T2", "T3", "T4"];
 
-export const MODEL_DISPLAY_LABELS: Record<ModelKey, string> = {
-  T1: "Type 1",
-  T2: "Type 2",
-  T3: "Type 3",
-  T4: "Type 4",
-};
-
-export const MODEL_CHART_LABELS: Record<ModelKey, string> = {
+export const MODEL_TYPE_LABELS: Record<ModelKey, string> = {
   T1: "Type I",
   T2: "Type II",
   T3: "Type III",
   T4: "Type IV",
 };
 
+export const MODEL_DISPLAY_LABELS: Record<ModelKey, string> = MODEL_TYPE_LABELS;
+
+export const MODEL_CHART_LABELS: Record<ModelKey, string> = MODEL_TYPE_LABELS;
+
 export const MODEL_COLORS: Record<ModelKey, string> = {
-  T1: "#b86b79",
-  T2: "#2f6ea5",
-  T3: "#4f9089",
-  T4: "#8fb4c8",
+  T1: "#d84c4c",
+  T2: "#2f8f57",
+  T3: "#2f6ea5",
+  T4: "#bf46b2",
 };
+
+export const MEASURED_DATA_COLOR = "#18324a";
