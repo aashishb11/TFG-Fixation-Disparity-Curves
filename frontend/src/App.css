@@ -1,6 +1,7 @@
 .app-shell {
   display: flex;
   flex-direction: column;
+  gap: 0.7rem;
   min-height: 100vh;
   background: linear-gradient(180deg, #f4f7fa 0%, #eef2f6 100%);
   color: #212529;
@@ -67,12 +68,64 @@
 }
 
 .sidebar {
-  width: 350px;
+  width: 380px;
   flex-shrink: 0;
-  padding: 1.5rem;
+  padding: 1.25rem;
   background: #ffffff;
   border-right: 1px solid #d9e2ec;
   overflow-y: auto;
+}
+
+.sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.sidebar__section + .sidebar__section {
+  margin-top: 0.8rem;
+}
+
+.sidebar__section--measurements {
+  padding: 0.8rem;
+  background: linear-gradient(180deg, #fbfdff 0%, #f7fafc 100%);
+  border: 1px solid #dce5ed;
+  border-radius: 14px;
+}
+
+.sidebar__heading,
+.group-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.sidebar__heading .section-title,
+.group-heading .group-title {
+  margin-bottom: 0;
+}
+
+.section-description,
+.group-description,
+.form-help,
+.field-feedback {
+  margin: 0;
+  color: #6c7a88;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  max-width: none;
+  text-align: left;
+  text-wrap: pretty;
+}
+
+.field-feedback--info {
+  color: #457b9d;
+}
+
+.field-feedback--error {
+  color: #b04a63;
 }
 
 .dashboard {
@@ -126,21 +179,34 @@
   gap: 0.75rem;
 }
 
-.input-grid__row {
+.form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.45rem;
 }
 
-.input-grid__label {
-  color: #6c757d;
-  font-size: 0.8125rem;
+.custom-distance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.form-label,
+.group-title {
+  margin: 0;
+  color: #4d5c6a;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
+.group-title {
+  font-size: 0.9rem;
+}
+
+.select-field,
 .input-grid__field {
   width: 100%;
-  padding: 0.625rem 0.75rem;
+  padding: 0.55rem 0.7rem;
   border: 1px solid #ced4da;
   border-radius: 8px;
   background: #ffffff;
@@ -149,10 +215,115 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.select-field {
+  appearance: none;
+}
+
+.custom-distance__control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.custom-distance__input {
+  min-width: 0;
+}
+
+.custom-distance__unit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 0.55rem 0.65rem;
+  background: #f4f7fa;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  color: #5f6f7d;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.select-field:focus,
 .input-grid__field:focus {
   border-color: #457b9d;
   box-shadow: 0 0 0 3px rgba(69, 123, 157, 0.18);
   outline: none;
+}
+
+.measurement-panel__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.measurement-panel__title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.measurement-panel__description {
+  width: 100%;
+  min-width: 0;
+}
+
+.measurement-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.45rem;
+  background: #edf4fa;
+  border: 1px solid #d5e3f0;
+  border-radius: 999px;
+  color: #36556f;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.measurement-status--manual {
+  background: #f3f6f9;
+  color: #5b6b79;
+}
+
+.measurement-list {
+  border: 1px solid #e1e9f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.measurement-list__head,
+.measurement-list__row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.46rem 0.62rem;
+}
+
+.measurement-list__head {
+  background: #f7fafc;
+  color: #70808e;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.measurement-list__row + .measurement-list__row {
+  border-top: 1px solid #edf1f5;
+}
+
+.measurement-list__x {
+  color: #15324a;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.measurement-list__input {
+  min-width: 0;
 }
 
 .sidebar__action {
@@ -309,5 +480,15 @@
 
   .button--secondary {
     width: 100%;
+  }
+
+  .measurement-panel__title-row {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .measurement-list__head,
+  .measurement-list__row {
+    grid-template-columns: 64px minmax(0, 1fr);
   }
 }

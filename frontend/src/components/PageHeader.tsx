@@ -9,9 +9,6 @@ export function PageHeader({ canExport, onExport }: PageHeaderProps) {
       <div className="app-header__content">
         <div className="app-header__intro">
           <h1 className="app-title">Fixation Disparity Curve Modeling</h1>
-          <span className="app-subtitle">
-            Mathematical optimization of T1-T4 non-linear fits
-          </span>
         </div>
 
         {canExport ? (
