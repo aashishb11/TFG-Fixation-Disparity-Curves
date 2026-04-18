@@ -4,6 +4,15 @@ type ErrorResponse = {
   detail?: string;
 };
 
+/**
+ * Calls the backend `/api/v1/compute` endpoint with the seven measured
+ * fixation-disparity y-values and returns the full fitting result.
+ *
+ * We read the response as text first rather than calling `.json()` directly
+ * because FastAPI error bodies may be JSON *or* plain strings, and we want
+ * to surface `error.detail` (FastAPI's standard error field) when available
+ * instead of a generic "HTTP 422" message.
+ */
 export async function computeFits(yValues: number[]): Promise<ComputeResponse> {
   const response = await fetch("/api/v1/compute", {
     method: "POST",

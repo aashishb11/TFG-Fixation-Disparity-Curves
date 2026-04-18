@@ -1,43 +1,18 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 type ExportMenuProps = {
   onDownloadPdf: () => void;
   onDownloadPng: () => void;
 };
 
-export function ExportMenu({
-  onDownloadPdf,
-  onDownloadPng,
-}: ExportMenuProps) {
+export function ExportMenu({ onDownloadPdf, onDownloadPng }: ExportMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuId = useId();
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) {
-      return undefined;
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
+  // Close on click-outside or Escape while the panel is open.
+  useClickOutside(menuRef, () => setIsOpen(false), isOpen);
 
   const handleAction = (action: () => void) => {
     setIsOpen(false);

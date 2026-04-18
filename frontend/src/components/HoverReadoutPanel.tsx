@@ -5,13 +5,10 @@ import {
   MODEL_COLORS,
   MODEL_KEYS,
 } from "../constants/fdc";
-import type { ModelKey } from "../types/fdc";
+import type { HoverSnapshot, ModelKey } from "../types/fdc";
 
-export type HoverSnapshot = {
-  x: number;
-  measuredValue: number | null;
-  modelValues: Partial<Record<ModelKey, number>>;
-};
+// Re-exported so existing imports from this path continue to work.
+export type { HoverSnapshot };
 
 type HoverReadoutPanelProps = {
   bestModel: ModelKey | null;

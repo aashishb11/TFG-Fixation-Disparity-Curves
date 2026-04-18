@@ -5,10 +5,8 @@ import { AdvancedMetricsSection } from "./components/AdvancedMetricsSection";
 import { ClassificationCard } from "./components/ClassificationCard";
 import { ClinicalReportChart } from "./components/ClinicalReportChart";
 import { CurveChart } from "./components/CurveChart";
-import {
-  HoverReadoutPanel,
-  type HoverSnapshot,
-} from "./components/HoverReadoutPanel";
+import { HoverReadoutPanel } from "./components/HoverReadoutPanel";
+import type { HoverSnapshot } from "./types/fdc";
 import { InputPanel } from "./components/InputPanel";
 import { PageHeader } from "./components/PageHeader";
 import { PdfExportDialog } from "./components/PdfExportDialog";

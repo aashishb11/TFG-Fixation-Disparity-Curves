@@ -13,17 +13,6 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
   const selectedModelKey = result?.classification.best_by_sse ?? null;
   const clinicalMeasurements = deriveClinicalMeasurements(result?.measured ?? []);
 
-  const formatSummaryValue = (
-    value: number | null,
-    fallback = "--",
-  ): string => {
-    if (value === null) {
-      return fallback;
-    }
-
-    return value.toFixed(3);
-  };
-
   const cardStyle = selectedModelKey
     ? ({ "--card-accent-color": MODEL_COLORS[selectedModelKey] } as CSSProperties)
     : undefined;
