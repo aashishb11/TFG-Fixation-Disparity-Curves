@@ -31,7 +31,7 @@ export function exportSvgToPng(
       return;
     }
 
-    context.fillStyle = "#ffffff";
+    context.fillStyle = "#f8fbfd";
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.scale(scale, scale);
     context.drawImage(image, 0, 0, width, height);

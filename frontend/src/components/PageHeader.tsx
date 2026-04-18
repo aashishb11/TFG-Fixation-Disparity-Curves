@@ -1,23 +1,20 @@
-type PageHeaderProps = {
-  canExport: boolean;
-  onExport: () => void;
-};
+import upcLogo from "../../images/UPC_Logo.png";
 
-export function PageHeader({ canExport, onExport }: PageHeaderProps) {
+export function PageHeader() {
   return (
     <header className="app-header">
-      <div className="app-header__intro">
-        <h1 className="app-title">Thesis: Fixation Disparity Curve Modeling</h1>
-        <span className="app-subtitle">
-          Mathematical optimization of T1-T4 non-linear fits
-        </span>
+      <div className="app-header__content">
+        <div className="app-header__intro">
+          <h1 className="app-title">Fixation Disparity Curve Modeling</h1>
+        </div>
+        <div className="app-header__brand" aria-label="UPC logo">
+          <img
+            alt="UPC logo"
+            className="app-header__logo"
+            src={upcLogo}
+          />
+        </div>
       </div>
-
-      {canExport ? (
-        <button className="button button--secondary" onClick={onExport} type="button">
-          Export High-Res PNG
-        </button>
-      ) : null}
     </header>
   );
 }

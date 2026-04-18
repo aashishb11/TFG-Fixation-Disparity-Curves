@@ -21,15 +21,34 @@ import {
 import type { MergedCurvePoint, Point } from "../types/fdc";
 
 type CurveChartProps = {
+  canExport: boolean;
   chartRef: RefObject<HTMLDivElement | null>;
   data: MergedCurvePoint[];
   measured: Point[];
+  onExport: () => void;
 };
 
-export function CurveChart({ chartRef, data, measured }: CurveChartProps) {
+export function CurveChart({
+  canExport,
+  chartRef,
+  data,
+  measured,
+  onExport,
+}: CurveChartProps) {
   return (
     <section className="card chart-card">
-      <h3 className="card__title">Regression Visualization</h3>
+      <div className="chart-card__header">
+        <h3 className="card__title">Regression Visualization</h3>
+        {canExport ? (
+          <button
+            className="button button--secondary chart-card__action"
+            onClick={onExport}
+            type="button"
+          >
+            Export High-Res PNG
+          </button>
+        ) : null}
+      </div>
       <div ref={chartRef} className="chart-card__container">
         <ResponsiveContainer>
           <ComposedChart
@@ -37,36 +56,49 @@ export function CurveChart({ chartRef, data, measured }: CurveChartProps) {
             margin={{ top: 10, right: 30, left: 20, bottom: 40 }}
           >
             <CartesianGrid
-              stroke="#f1f3f5"
+              stroke="#dbe6ee"
               strokeDasharray="3 3"
               vertical={false}
             />
             <XAxis
+              axisLine={{ stroke: "#c9d8e4" }}
               dataKey="x"
               domain={AXIS_DOMAIN}
-              label={{ value: "Input", position: "bottom", offset: 20 }}
+              label={{
+                value: "Input",
+                position: "bottom",
+                offset: 20,
+                fill: "#5c7288",
+              }}
+              tick={{ fill: "#5c7288", fontSize: 12 }}
+              tickLine={{ stroke: "#c9d8e4" }}
               ticks={AXIS_TICKS}
               type="number"
             />
             <YAxis
+              axisLine={{ stroke: "#c9d8e4" }}
               domain={AXIS_DOMAIN}
               label={{
                 value: "Patient's input",
                 angle: -90,
                 position: "insideLeft",
                 offset: 0,
+                fill: "#5c7288",
               }}
-              stroke="#adb5bd"
+              stroke="#a8bac8"
+              tick={{ fill: "#5c7288", fontSize: 12 }}
+              tickLine={{ stroke: "#c9d8e4" }}
               ticks={AXIS_TICKS}
               type="number"
             />
-            <ReferenceLine stroke="#adb5bd" strokeWidth={1.5} x={0} />
-            <ReferenceLine stroke="#adb5bd" strokeWidth={1.5} y={0} />
+            <ReferenceLine stroke="#a8bac8" strokeWidth={1.5} x={0} />
+            <ReferenceLine stroke="#a8bac8" strokeWidth={1.5} y={0} />
             <Tooltip
               contentStyle={{
+                backgroundColor: "#f8fbfd",
                 borderRadius: "8px",
-                border: "none",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                border: "1px solid #c9d8e4",
+                boxShadow: "0 10px 20px rgba(24, 50, 74, 0.08)",
               }}
             />
             <Legend align="right" iconType="circle" verticalAlign="top" />
@@ -87,7 +119,7 @@ export function CurveChart({ chartRef, data, measured }: CurveChartProps) {
             <Scatter
               data={measured}
               dataKey="y"
-              fill="#212529"
+              fill="#18324a"
               name="Measured Data"
             />
           </ComposedChart>
