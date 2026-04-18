@@ -7,7 +7,7 @@ type MetricsTableProps = {
 
 export function MetricsTable({ result }: MetricsTableProps) {
   return (
-    <article className="card">
+    <article className="card card--metrics">
       <h3 className="card__title">Fit Accuracy Metrics</h3>
 
       {!result ? (

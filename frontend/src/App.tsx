@@ -148,8 +148,8 @@ export default function App() {
 
         <main className="dashboard">
           <section className="dashboard-grid">
-            <MetricsTable result={response} />
             <ClassificationCard result={response} />
+            <MetricsTable result={response} />
           </section>
 
           <CurveChart

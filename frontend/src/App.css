@@ -190,9 +190,65 @@
 }
 
 .card--classification {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 1rem;
+  grid-column: 1 / -1;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #fcfeff 0%, #eef5fb 55%, #f7fbfe 100%);
+  border-color: #b9cfdf;
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(24, 50, 74, 0.08);
+  overflow: hidden;
+}
+
+.card--classification::after {
+  content: "";
+  position: absolute;
+  inset: auto -80px -80px auto;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(47, 110, 165, 0.14) 0%, rgba(47, 110, 165, 0) 72%);
+  pointer-events: none;
+}
+
+.card--metrics {
+  grid-column: 1 / -1;
+}
+
+.classification-card__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(220px, 0.9fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.classification-card__primary,
+.classification-card__slope,
+.summary-stat {
+  position: relative;
+  z-index: 1;
+  border-radius: 16px;
+  border: 1px solid var(--color-border-soft);
+}
+
+.classification-card__primary {
+  padding: 1.25rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(233, 243, 250, 0.98) 100%);
+}
+
+.classification-card__primary .card__title {
+  margin-bottom: 0.8rem;
+}
+
+.classification-card__slope {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
+  padding: 1.25rem;
+  background: linear-gradient(180deg, rgba(248, 251, 253, 0.95) 0%, rgba(227, 240, 250, 0.9) 100%);
 }
 
 .card__placeholder {
@@ -455,16 +511,57 @@
 
 .classification-card__value {
   color: var(--color-accent);
-  font-size: 1.75rem;
+  font-size: clamp(2rem, 1.5rem + 1.2vw, 2.8rem);
   font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 
 .classification-card__note {
   display: block;
-  margin-top: 0.25rem;
+  margin-top: 0.45rem;
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 400;
+  font-size: 0.8rem;
+  font-weight: 500;
+  max-width: 42ch;
+}
+
+.classification-card__stat-label,
+.summary-stat__label {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.classification-card__stat-value,
+.summary-stat__value {
+  color: var(--color-text-primary);
+  font-size: clamp(1.5rem, 1.15rem + 0.65vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.classification-card__stat-note,
+.summary-stat__meta {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.classification-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem 1.2rem;
+  background: rgba(248, 251, 253, 0.88);
 }
 
 .chart-card {
@@ -505,6 +602,11 @@
   }
 
   .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .classification-card__top,
+  .classification-card__stats {
     grid-template-columns: 1fr;
   }
 }
