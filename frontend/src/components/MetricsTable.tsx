@@ -6,42 +6,44 @@ type MetricsTableProps = {
 };
 
 export function MetricsTable({ result }: MetricsTableProps) {
+  if (!result) {
+    return <div className="card__placeholder">Awaiting computation...</div>;
+  }
+
   return (
-    <article className="card">
-      <h3 className="card__title">Fit Accuracy Metrics</h3>
+    <div className="metric-table__wrap">
+      <table className="metric-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>SSE</th>
+            <th>RMSE</th>
+            <th>Slope</th>
+          </tr>
+        </thead>
+        <tbody>
+          {MODEL_KEYS.map((modelKey) => {
+            const model = result.models[modelKey];
+            const isBestFit = result.classification.best_by_sse === modelKey;
 
-      {!result ? (
-        <div className="card__placeholder">Awaiting computation...</div>
-      ) : (
-        <table className="metric-table">
-          <thead>
-            <tr>
-              <th>Model</th>
-              <th>SSE</th>
-              <th>RMSE</th>
-              <th>Slope</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MODEL_KEYS.map((modelKey) => {
-              const model = result.models[modelKey];
-              const isBestFit = result.classification.best_by_sse === modelKey;
-
-              return (
-                <tr
-                  key={modelKey}
-                  className={isBestFit ? "metric-table__row metric-table__row--active" : "metric-table__row"}
-                >
-                  <td>{MODEL_DISPLAY_LABELS[modelKey]}</td>
-                  <td>{model.sse.toFixed(3)}</td>
-                  <td>{model.rmse.toFixed(3)}</td>
-                  <td>{model.slope.toFixed(3)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </article>
+            return (
+              <tr
+                key={modelKey}
+                className={
+                  isBestFit
+                    ? "metric-table__row metric-table__row--active"
+                    : "metric-table__row"
+                }
+              >
+                <td>{MODEL_DISPLAY_LABELS[modelKey]}</td>
+                <td>{model.sse.toFixed(3)}</td>
+                <td>{model.rmse.toFixed(3)}</td>
+                <td>{model.slope.toFixed(3)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

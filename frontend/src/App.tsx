@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import "./App.css";
 import { computeFits } from "./api/fdc";
+import { AdvancedMetricsSection } from "./components/AdvancedMetricsSection";
 import { ClassificationCard } from "./components/ClassificationCard";
 import { CurveChart } from "./components/CurveChart";
 import { InputPanel } from "./components/InputPanel";
-import { MetricsTable } from "./components/MetricsTable";
 import { PageHeader } from "./components/PageHeader";
 import { FIXED_X_VALUES, getPresetValuesForFixedX } from "./constants/fdc";
 import { mergeModelCurves } from "./lib/chart";
@@ -148,8 +148,8 @@ export default function App() {
 
         <main className="dashboard">
           <section className="dashboard-grid">
-            <MetricsTable result={response} />
             <ClassificationCard result={response} />
+            <AdvancedMetricsSection result={response} />
           </section>
 
           <CurveChart
