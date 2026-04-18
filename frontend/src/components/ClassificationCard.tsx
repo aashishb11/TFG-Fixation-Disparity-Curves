@@ -24,7 +24,7 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
 
   return (
     <article className="card card--classification">
-      <div className="classification-card__top">
+      <div className="classification-card__grid">
         <section className="classification-card__primary">
           <h3 className="card__title">Classification</h3>
           {result ? (
@@ -53,9 +53,7 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
             Reported from the selected clinical model
           </span>
         </section>
-      </div>
 
-      <div className="classification-card__stats">
         <section className="summary-stat">
           <span className="summary-stat__label">Fixation Disparity</span>
           <strong className="summary-stat__value">
