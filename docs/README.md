@@ -5,8 +5,6 @@ An interactive web application for fitting, visualizing and classifying **Fixati
 Reference paper (linked from `docs/`):
 <https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf>
 
-> This is **Phase 1** of the TFG (see [`docs/README.md`](docs/README.md)): an end-to-end web app that visualizes FDCs and classifies them into types T1–T4 via polynomial/nonlinear approximation and error comparison.
-
 ---
 
 ## Table of contents
