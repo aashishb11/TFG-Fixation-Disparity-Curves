@@ -1,0 +1,1338 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---- Packages ----
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black,
+  pdftitle={Fixation Disparity Curve Modeling - Technical Documentation},
+  pdfauthor={TFG Project}
+}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+% ---- Listings style ----
+\definecolor{codebg}{HTML}{F5F5F5}
+\definecolor{codekw}{HTML}{0033B3}
+\definecolor{codestr}{HTML}{067D17}
+\definecolor{codecom}{HTML}{808080}
+
+\lstdefinestyle{mono}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  stringstyle=\color{codestr},
+  breaklines=true,
+  showstringspaces=false,
+  frame=single,
+  framesep=4pt,
+  rulecolor=\color{black!20},
+  tabsize=2,
+  columns=fullflexible,
+  keepspaces=true
+}
+\lstset{style=mono}
+
+% ---- Headers ----
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small FDC Modeling -- TFG}
+\lhead{\small Technical Documentation}
+\rfoot{\thepage}
+
+% ---- Title ----
+\title{%
+  \vspace{-1.5cm}
+  \textbf{Fixation Disparity Curve Modeling} \\[0.3em]
+  \large Technical Documentation of the TFG Repository
+}
+\author{Project Repository: \texttt{TFG}}
+\date{Generated: April 2026}
+
+\begin{document}
+
+% =====================================================
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+
+  {\Huge\bfseries Fixation Disparity Curve Modeling\par}
+  \vspace{1em}
+  {\Large Technical Documentation of the TFG Repository\par}
+
+  \vspace{3cm}
+
+  \begin{tabular}{rl}
+    \textbf{Project:} & TFG -- Phase 1 Web Application \\
+    \textbf{Backend:} & Python \textbullet{} FastAPI \textbullet{} GEKKO \\
+    \textbf{Frontend:} & React 19 \textbullet{} TypeScript \textbullet{} Vite \\
+    \textbf{Testing:} & pytest (backend) \textbullet{} Vitest (frontend) \\
+    \textbf{Branch inspected:} & \texttt{dev} \\
+  \end{tabular}
+
+  \vfill
+  {\large This document was generated from an inspection of the repository
+  contents and reflects only what is present in the code. Items that could
+  not be confirmed from the repository are explicitly labeled.\par}
+  \vspace{1cm}
+  {\large April 2026\par}
+\end{titlepage}
+
+% =====================================================
+\tableofcontents
+\newpage
+
+% =====================================================
+\section{Project Overview}
+\label{sec:overview}
+
+\subsection{What the project is}
+The repository implements \textbf{Phase 1} of a TFG (\emph{Trabajo de Fin de
+Grado}) focused on \textbf{Fixation Disparity Curves (FDC)} used in optometry.
+It is an interactive web application that:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item accepts \textbf{7 clinical y-values} measured at fixed x-positions
+        $\{-15,-10,-5,0,5,10,15\}$;
+  \item fits \textbf{four candidate nonlinear models} (T1, T2, T3, T4) to those points;
+  \item computes per-model error metrics (\textbf{SSE} and \textbf{RMSE}) and
+        the paper-defined \textbf{slope} $|f(3)-f(-3)|/6$;
+  \item returns a classification indicating the best-fitting model by SSE and by RMSE;
+  \item visualises the four fitted curves along with the measured points,
+        exposes a classification card (best fit, slope, fixation disparity,
+        associated phoria), offers a chart hover readout, an export menu with
+        high-resolution PNG and PDF report output, and displays a collapsible
+        metrics table.
+\end{itemize}
+
+The reference paper is bundled under \texttt{docs/references/}; its public URL
+is cited in \texttt{docs/README.md}:
+\url{https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf}.
+
+\subsection{Main purpose}
+Phase~1 delivers an end-to-end, stateless tool for clinicians and researchers
+to approximate a patient's FDC, quantify model fit, and pick the curve type
+that best describes the measurement.
+
+\subsection{Tech stack}
+
+\begin{longtable}{@{}p{0.25\linewidth} p{0.7\linewidth}@{}}
+\toprule
+\textbf{Layer} & \textbf{Technology (as found in repo files)} \\
+\midrule
+Backend runtime     & Python 3.x (\emph{no explicit pin}; tested with 3.13) \\
+Web framework       & FastAPI \texttt{0.129.2} \\
+ASGI server         & Uvicorn \texttt{0.41.0} \\
+Validation          & Pydantic \texttt{2.12.5} \\
+Numerics            & NumPy \texttt{2.4.2} \\
+Optimisation solver & GEKKO \texttt{1.3.2} \\
+Backend tests       & pytest \texttt{9.0.3} + httpx \texttt{0.28.1}
+                      (\texttt{backend/requirements-dev.txt}) \\
+Frontend framework  & React \texttt{19.2.0} + React-DOM \texttt{19.2.0} \\
+Language            & TypeScript \texttt{\textasciitilde{}5.9.3} (strict mode) \\
+Build tool          & Vite \texttt{7.3.1} (\texttt{@vitejs/plugin-react 5.1.1}) \\
+Charting            & Recharts \texttt{3.7.0} \\
+PDF generation      & jsPDF \texttt{4.2.1} \\
+Linter              & ESLint \texttt{9.39.1} + \texttt{typescript-eslint 8.48.0} \\
+Frontend tests      & Vitest \texttt{4.1.4} + jsdom + Testing Library (React,
+                      jest-dom, user-event) \\
+Persistence         & \emph{None} (stateless API) \\
+Container / CI      & \emph{None present in repository} \\
+\bottomrule
+\end{longtable}
+
+\subsection{Features}
+\begin{itemize}[leftmargin=1.2em]
+  \item Seven-point input panel with clinical presets (40\,cm, 25\,cm) and a
+        custom-distance option.
+  \item Nonlinear fitting of four models with per-model parameter constraints,
+        solved by GEKKO.
+  \item Per-model metrics: SSE, RMSE, paper-defined slope.
+  \item Classification by both SSE and RMSE (\texttt{best\_by\_sse},
+        \texttt{best\_by\_rmse}).
+  \item Composed chart (four curves + scatter of measured points) with
+        reference lines at $x=0$ and $y=0$ and fixed axis domain $[-20,20]$.
+  \item Hover readout panel showing interpolated model values and
+        snap-to-measured behaviour (\texttt{lib/chartHover.ts}).
+  \item Patient-limit dashed markers at $x = -15, -10$ when measured
+        $y = 0$ (\texttt{lib/chartAnnotations.ts}).
+  \item Classification card showing best fit, slope, fixation disparity
+        ($y$ at $x=0$) and associated phoria.
+  \item Collapsible metrics table with the best-by-SSE row highlighted.
+  \item Export menu with PNG ($2\times$) and PDF report output
+        (\texttt{lib/exportChart.ts}, \texttt{lib/pdfReport.ts},
+        \texttt{components/PdfExportDialog.tsx}).
+  \item Version-counter protection in the SPA against stale responses.
+  \item Automated test suite on both sides (26 backend + 56 frontend tests).
+\end{itemize}
+
+% =====================================================
+\section{Repository Structure}
+\label{sec:structure}
+
+\subsection{Top-level tree}
+
+\begin{lstlisting}
+TFG/
+|-- backend/
+|   |-- app/
+|   |   |-- main.py                  # FastAPI entry point
+|   |   `-- services/
+|   |       `-- fdc_fit.py           # GEKKO curve fitting + metrics
+|   |-- tests/
+|   |   |-- conftest.py              # Puts backend/ on sys.path
+|   |   |-- test_fdc_fit.py          # Unit + integration tests
+|   |   `-- test_main.py             # HTTP tests via TestClient
+|   |-- pytest.ini                   # pytest config (testpaths, markers)
+|   |-- requirements.txt             # Pinned runtime Python dependencies
+|   `-- requirements-dev.txt         # Test-time dependencies
+|-- frontend/
+|   |-- images/UPC_Logo.png          # Header logo asset
+|   |-- public/vite.svg
+|   |-- src/
+|   |   |-- api/fdc.ts               # Backend client: computeFits()
+|   |   |-- components/              # React components
+|   |   |   |-- AdvancedMetricsSection.tsx
+|   |   |   |-- ClassificationCard.tsx
+|   |   |   |-- ClinicalReportChart.tsx
+|   |   |   |-- CurveChart.tsx
+|   |   |   |-- ExportMenu.tsx
+|   |   |   |-- HoverReadoutPanel.tsx
+|   |   |   |-- InputPanel.tsx
+|   |   |   |-- MetricsTable.tsx
+|   |   |   |-- PageHeader.tsx
+|   |   |   `-- PdfExportDialog.tsx
+|   |   |-- constants/fdc.ts         # Fixed x, presets, labels, colours
+|   |   |-- hooks/useClickOutside.ts # Dismiss-on-outside-click hook
+|   |   |-- lib/
+|   |   |   |-- chart.ts             # mergeModelCurves
+|   |   |   |-- chartAnnotations.ts  # Patient-limit markers
+|   |   |   |-- chartHover.ts        # Hover/interp/snap helpers
+|   |   |   |-- clinicalSummary.ts   # FD at x=0, associated phoria
+|   |   |   |-- exportChart.ts       # SVG -> PNG export
+|   |   |   |-- input.ts             # Validation helpers
+|   |   |   `-- pdfReport.ts         # jsPDF composition
+|   |   |-- types/fdc.ts             # Shared TypeScript types
+|   |   |-- test/setup.ts            # Vitest setup (jest-dom, cleanup)
+|   |   |-- **/*.test.ts{,x}         # Co-located Vitest tests
+|   |   |-- App.tsx                  # Root component
+|   |   |-- main.tsx                 # React entry point
+|   |   |-- App.css
+|   |   `-- index.css
+|   |-- index.html
+|   |-- package.json
+|   |-- package-lock.json
+|   |-- tsconfig.json
+|   |-- tsconfig.app.json
+|   |-- tsconfig.node.json
+|   |-- vite.config.ts
+|   |-- vitest.config.ts             # jsdom env, coverage, setup file
+|   |-- eslint.config.js
+|   `-- README.md                    # Project README
+`-- docs/
+    |-- README.md                    # Phase 1 requirements
+    |-- Requirements.pdf
+    |-- TFG_Documentation.tex        # This document
+    |-- model-and-errors.md          # empty file
+    `-- references/                  # Reference paper PDF
+\end{lstlisting}
+
+\subsection{Purpose of each important folder/file}
+
+\begin{longtable}{@{}p{0.36\linewidth} p{0.58\linewidth}@{}}
+\toprule
+\textbf{Path} & \textbf{Purpose} \\
+\midrule
+\texttt{backend/app/main.py} &
+FastAPI application: CORS configuration, Pydantic request model, two routes
+(\texttt{/api/v1/health}, \texttt{/api/v1/compute}). \\
+\texttt{backend/app/services/fdc\_fit.py} &
+Core numerical module: four GEKKO models with constraints, SSE/RMSE helpers,
+paper-defined slope, JSON assembly. \\
+\texttt{backend/tests/test\_fdc\_fit.py} &
+Unit + integration tests for the fitter (helpers, evaluation, slope,
+validation, end-to-end fits against synthetic data). \\
+\texttt{backend/tests/test\_main.py} &
+HTTP-level tests using FastAPI's \texttt{TestClient}. \\
+\texttt{backend/pytest.ini} &
+pytest configuration: test discovery root and the \texttt{slow} marker for
+GEKKO-backed tests. \\
+\texttt{backend/requirements.txt} &
+Pinned runtime Python dependencies. \\
+\texttt{backend/requirements-dev.txt} &
+Test-time dependencies only (pytest, httpx). \\
+\texttt{frontend/src/App.tsx} &
+Orchestration of the SPA: state, compute trigger, race-safe versioning,
+layout. \\
+\texttt{frontend/src/api/fdc.ts} &
+Thin fetch wrapper around \texttt{POST /api/v1/compute}. \\
+\texttt{frontend/src/components/*.tsx} &
+Presentational components (header, input, chart, classification, metrics,
+hover readout, export menu, PDF dialog, clinical report chart). \\
+\texttt{frontend/src/constants/fdc.ts} &
+Fixed x-values, axis domain/ticks, viewing-distance presets, model labels
+and colours. \\
+\texttt{frontend/src/hooks/useClickOutside.ts} &
+Reusable dismiss-on-outside-click and Escape-key hook. \\
+\texttt{frontend/src/lib/*.ts} &
+Pure helper functions (chart merging, annotations, hover interpolation,
+clinical summary, PNG export, PDF report, input validation). \\
+\texttt{frontend/src/types/fdc.ts} &
+Shared TypeScript types for the API contract and UI. \\
+\texttt{frontend/src/test/setup.ts} &
+Vitest setup file: jest-dom matchers + React Testing Library cleanup. \\
+\texttt{frontend/vite.config.ts} &
+Vite configuration with the \texttt{/api} proxy to
+\texttt{http://localhost:8000}. \\
+\texttt{frontend/vitest.config.ts} &
+Vitest configuration (\texttt{jsdom}, setup file, coverage). \\
+\texttt{frontend/tsconfig*.json} &
+Strict TypeScript project references for app code and the Vite config. \\
+\texttt{frontend/eslint.config.js} &
+Flat ESLint configuration. \\
+\texttt{docs/README.md} &
+Phase~1 functional requirements. \\
+\texttt{docs/references/} &
+Reference paper used for the slope/error methodology. \\
+\bottomrule
+\end{longtable}
+
+% =====================================================
+\section{Prerequisites}
+\label{sec:prereq}
+
+\subsection{Languages and runtimes}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Python}: no version is pinned in \texttt{requirements.txt} and
+        there is no \texttt{pyproject.toml}. The pinned dependency versions
+        (e.g.\ \texttt{numpy==2.4.2}, \texttt{pydantic==2.12.5}) imply a recent
+        interpreter; \textbf{Python~3.11+} is a safe baseline, and the test
+        suite in this repository has been run successfully under Python~3.13.
+  \item \textbf{Node.js}: \texttt{frontend/package.json} has no \texttt{engines}
+        field. Vite~7 documentation lists Node~20.19+ or 22.12+; the tests in
+        this repository have been run successfully under Node~22.
+  \item \textbf{npm}: implied by \texttt{package-lock.json}. No pnpm or yarn
+        lock file is present.
+\end{itemize}
+
+\subsection{Declared backend runtime dependencies}
+See \texttt{backend/requirements.txt}. Key pinned packages include
+\texttt{fastapi}, \texttt{uvicorn}, \texttt{pydantic}, \texttt{numpy}, and
+\texttt{gekko} (versions listed in Table of Tech Stack above).
+
+\subsection{Declared backend test dependencies}
+From \texttt{backend/requirements-dev.txt}:
+
+\begin{lstlisting}
+pytest==9.0.3
+httpx==0.28.1
+\end{lstlisting}
+
+\subsection{Declared frontend dependencies}
+The \texttt{package.json} declares:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Runtime}: \texttt{react}, \texttt{react-dom}, \texttt{recharts},
+        \texttt{jspdf}.
+  \item \textbf{Dev tooling}: \texttt{vite}, \texttt{@vitejs/plugin-react},
+        \texttt{typescript}, ESLint and its plugins.
+  \item \textbf{Testing}: \texttt{vitest},
+        \texttt{@vitest/coverage-v8}, \texttt{jsdom},
+        \texttt{@testing-library/react}, \texttt{@testing-library/jest-dom},
+        \texttt{@testing-library/user-event}.
+\end{itemize}
+
+\subsection{Databases / external services}
+None. The backend is stateless and makes no outbound network calls.
+
+% =====================================================
+\section{Installation and Setup}
+\label{sec:install}
+
+\subsection{Backend}
+\begin{lstlisting}[language=bash]
+cd backend
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt
+# optional, only if you want to run the tests:
+pip install -r requirements-dev.txt
+\end{lstlisting}
+
+\subsection{Frontend}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm install
+\end{lstlisting}
+
+\subsection{Environment variables}
+\textbf{The repository defines no environment variables.} A search across the
+codebase for \texttt{os.environ}, \texttt{process.env} and
+\texttt{import.meta.env} yields no matches; there is no \texttt{.env.example}.
+Instead, the relevant origins are hard-coded:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item Backend CORS allow-list: \texttt{http://localhost:5173}
+        (\texttt{backend/app/main.py}).
+  \item Frontend dev proxy target: \texttt{http://localhost:8000}
+        (\texttt{frontend/vite.config.ts}).
+\end{itemize}
+
+\subsection{Database}
+Not applicable --- no database layer exists in the repository.
+
+% =====================================================
+\section{How to Run the Project}
+\label{sec:run}
+
+\subsection{Development mode}
+Run backend and frontend in two terminals.
+
+\textbf{Terminal 1 --- backend:}
+\begin{lstlisting}[language=bash]
+cd backend
+# activate venv first
+uvicorn app.main:app --reload --port 8000
+\end{lstlisting}
+
+Interactive FastAPI docs are served at \url{http://localhost:8000/docs} and
+\url{http://localhost:8000/redoc} by default.
+
+\textbf{Terminal 2 --- frontend:}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm run dev
+\end{lstlisting}
+
+The dev server listens on Vite's default port (5173). Requests to
+\texttt{/api/*} are proxied to \texttt{http://localhost:8000} (see
+\texttt{vite.config.ts}).
+
+\subsection{Production build (frontend)}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm run build       # tsc -b && vite build -> frontend/dist/
+npm run preview     # local preview of the built artifacts
+\end{lstlisting}
+
+\subsection{Production mode (backend)}
+A common self-hosted pattern is:
+\begin{lstlisting}[language=bash]
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+\end{lstlisting}
+behind a reverse proxy that forwards \texttt{/api/*} to the backend and serves
+\texttt{frontend/dist/} as static assets. The deployment section
+(\S\ref{sec:deploy}) details a full procedure.
+
+\subsection{Docker / Compose}
+\emph{Not found in repository.}
+
+% =====================================================
+\section{Scripts and Commands}
+\label{sec:scripts}
+
+\subsection{Frontend scripts (from \texttt{package.json})}
+\begin{longtable}{@{}p{0.22\linewidth} p{0.30\linewidth} p{0.43\linewidth}@{}}
+\toprule
+\textbf{Script} & \textbf{Command} & \textbf{Effect} \\
+\midrule
+\texttt{dev}              & \texttt{vite}                         & Start Vite dev server with HMR (default port 5173). \\
+\texttt{build}            & \texttt{tsc -b \&\& vite build}       & Project-reference type-check, then production build into \texttt{frontend/dist/}. \\
+\texttt{lint}             & \texttt{eslint .}                     & Run ESLint over the frontend sources. \\
+\texttt{preview}          & \texttt{vite preview}                 & Serve the production build locally. \\
+\texttt{test}             & \texttt{vitest run}                   & Run the full Vitest suite once and exit. \\
+\texttt{test:watch}       & \texttt{vitest}                       & Watch-mode test runner for development. \\
+\texttt{test:coverage}    & \texttt{vitest run --coverage}        & Run tests and emit coverage under \texttt{coverage/}. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Backend scripts}
+No \texttt{Makefile} or \texttt{pyproject.toml} scripts exist. The application
+is started directly with \texttt{uvicorn app.main:app} and the test suite with
+\texttt{pytest} from the \texttt{backend/} directory.
+
+% =====================================================
+\section{Architecture}
+\label{sec:arch}
+
+\subsection{High-level view}
+The application is a two-tier SPA + REST API:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Frontend (Vite + React 19)} runs client-side, owns the input
+        panel, chart, classification and metrics UI, and calls the backend via
+        \texttt{fetch}. It uses component-local state (\texttt{useState},
+        \texttt{useMemo}, \texttt{useRef}) --- \emph{no global store}.
+  \item \textbf{Backend (FastAPI + Uvicorn)} exposes a tiny, stateless API.
+        Each request rebuilds four GEKKO models, solves them, and returns the
+        fit results as JSON.
+\end{itemize}
+
+\subsection{Request flow}
+\begin{enumerate}[leftmargin=1.6em]
+  \item User selects a viewing distance (\texttt{40cm}, \texttt{25cm}, or
+        \texttt{other}); for presets, the seven input fields are pre-filled
+        from \texttt{VIEWING\_DISTANCE\_PRESETS} in
+        \texttt{frontend/src/constants/fdc.ts}.
+  \item On "Run Statistical Fit", \texttt{App.tsx} validates inputs
+        (\texttt{validateViewingDistance}, \texttt{parseYValues} from
+        \texttt{src/lib/input.ts}) and calls \texttt{computeFits(values)}
+        (\texttt{src/api/fdc.ts}).
+  \item \texttt{computeFits} issues \texttt{POST /api/v1/compute} with
+        \texttt{\{"y": [\ldots]\}}.
+  \item FastAPI's Pydantic layer validates the 7-length vector. The handler
+        calls \texttt{fit\_all\_models(y)} in
+        \texttt{backend/app/services/fdc\_fit.py}.
+  \item \texttt{fit\_all\_models} fits T1--T4 through
+        \texttt{\_fit\_single\_model}, computes SSE/RMSE/slope, builds smooth
+        curves and the classification, and returns JSON.
+  \item The frontend stores the response, \texttt{mergeModelCurves} assembles
+        it for Recharts, and the components render the chart, classification
+        card, hover readout and advanced metrics table.
+\end{enumerate}
+
+\subsection{Classification logic (backend)}
+For each model $t \in \{T1,T2,T3,T4\}$ a GEKKO NLP is solved that minimises
+the SSE of the model predictions against the measured $y$-values, subject to
+the per-model parameter constraints in \texttt{\_fit\_single\_model}. The
+classification is the argmin over SSE (and independently over RMSE).
+
+\subsection{Model equations}
+\begin{longtable}{@{}p{0.10\linewidth} p{0.48\linewidth} p{0.38\linewidth}@{}}
+\toprule
+\textbf{Model} & \textbf{Equation} & \textbf{Parameters} \\
+\midrule
+T1 & $f(x) = a + b\,(x-c)^{3}$                              & $a, b, c$ \\
+T2 & $f(x) = a + b\,\exp\!\bigl(-c\,(x-d)\bigr)$            & $a, b, c, d$ \\
+T3 & $f(x) = a - b\,\exp\!\bigl(c\,(x-d)\bigr)$             & $a, b, c, d$ \\
+T4 & $f(x) = a - b\,\arctan\!\bigl(c\,(x-d)\bigr)$          & $a, b, c, d$ \\
+\bottomrule
+\end{longtable}
+
+\subsection{Slope and clinical summary}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Slope (paper-defined):}
+        $\text{slope} = \dfrac{|f(3) - f(-3)|}{6}$, computed analytically
+        per model in \texttt{\_compute\_slope\_paper}.
+  \item \textbf{Fixation disparity:} value of the best-fit curve at $x=0$,
+        computed on the client in
+        \texttt{frontend/src/lib/clinicalSummary.ts}.
+  \item \textbf{Associated phoria:} smallest non-zero $x$ at which the
+        measured data crosses $y=0$ (same helper).
+\end{itemize}
+
+% =====================================================
+\section{Detailed Codebase Explanation}
+\label{sec:detail}
+
+\subsection{Backend: \texttt{backend/app/main.py}}
+Entry point (abridged):
+
+\begin{lstlisting}[language=Python]
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, conlist
+
+from app.services.fdc_fit import fit_all_models
+
+app = FastAPI(title="TFG Fixation Disparity API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class ComputeRequest(BaseModel):
+    y: conlist(float, min_length=7, max_length=7)
+
+@app.get("/api/v1/health")
+def health():
+    return {"status": "ok"}
+
+@app.post("/api/v1/compute")
+def compute(req: ComputeRequest):
+    try:
+        return fit_all_models(req.y)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Computation failed: {e}")
+\end{lstlisting}
+
+Key points:
+\begin{itemize}[leftmargin=1.2em]
+  \item CORS is restricted to the Vite dev origin.
+  \item Request validation uses a constrained list of seven floats.
+  \item \texttt{ValueError} from the fitter becomes a \texttt{400}; any other
+        exception becomes a \texttt{500} with a message.
+\end{itemize}
+
+\subsection{Backend: \texttt{backend/app/services/fdc\_fit.py}}
+The module defines (non-exhaustive):
+\begin{itemize}[leftmargin=1.2em]
+  \item \texttt{DEFAULT\_X = [-15, -10, -5, 0, 5, 10, 15]}.
+  \item \texttt{@dataclass FitResult} with fields \texttt{model},
+        \texttt{params}, \texttt{sse}, \texttt{rmse}, \texttt{slope},
+        \texttt{curve\_points}, \texttt{fitted\_at\_x}.
+  \item \texttt{\_sse}, \texttt{\_rmse} --- numpy-based metric helpers.
+  \item \texttt{\_fit\_error} --- GEKKO \texttt{Intermediate} SSE objective.
+  \item \texttt{\_build\_smooth\_x(x, n=200)} --- dense x vector for plotting.
+  \item \texttt{fit\_all\_models(y, x, smooth\_n)} --- validates input shape
+        and finiteness, runs all four fits, computes \texttt{best\_by\_sse}
+        and \texttt{best\_by\_rmse}, returns the response dictionary.
+  \item \texttt{\_fit\_single\_model} --- GEKKO model per curve type with
+        per-model constraints.
+  \item \texttt{\_eval\_model} --- evaluates the fitted analytical model at
+        arbitrary x values.
+  \item \texttt{\_compute\_slope\_paper} --- computes $|f(3)-f(-3)|/6$
+        analytically per model.
+\end{itemize}
+
+\subsection{Frontend: \texttt{frontend/src/App.tsx}}
+The root component keeps all state: selected viewing distance, custom
+distance and its \emph{touched} flag, the 7 y-value strings, the
+loading/error/response triplet, and a \texttt{computationVersionRef} used to
+discard stale responses when inputs change mid-flight.
+
+\subsection{Frontend: components}
+\begin{longtable}{@{}p{0.32\linewidth} p{0.62\linewidth}@{}}
+\toprule
+\textbf{Component} & \textbf{Responsibility} \\
+\midrule
+\texttt{PageHeader}             & Branded header; title and
+                                  \texttt{images/UPC\_Logo.png}. \\
+\texttt{InputPanel}             & Viewing-distance dropdown; custom-distance
+                                  input when \texttt{other}; seven y-value
+                                  inputs; submit button; error display. \\
+\texttt{CurveChart}             & Recharts \texttt{ComposedChart} with four
+                                  \texttt{Line} series and a measured-point
+                                  \texttt{Scatter}; reference lines, fixed
+                                  axis domain $[-20,20]$. \\
+\texttt{HoverReadoutPanel}      & Side panel showing the interpolated values
+                                  for each model at the cursor position. \\
+\texttt{ClassificationCard}     & Best fit by SSE; slope from the selected
+                                  model; fixation disparity; associated
+                                  phoria. \\
+\texttt{AdvancedMetricsSection} & Collapsible wrapper around the metrics
+                                  table. \\
+\texttt{MetricsTable}           & Model / SSE / RMSE / Slope table;
+                                  highlights the best-by-SSE row. \\
+\texttt{ExportMenu}             & Dropdown with PNG and PDF export actions. \\
+\texttt{PdfExportDialog}        & Modal that collects metadata before the
+                                  PDF report is generated. \\
+\texttt{ClinicalReportChart}    & Print-oriented chart used by the PDF
+                                  export. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Frontend: library helpers (\texttt{src/lib/})}
+\begin{longtable}{@{}p{0.30\linewidth} p{0.63\linewidth}@{}}
+\toprule
+\textbf{File} & \textbf{Function(s)} \\
+\midrule
+\texttt{input.ts}             & \texttt{validateViewingDistance},
+                                 \texttt{parseYValues}. \\
+\texttt{chart.ts}             & \texttt{mergeModelCurves}. \\
+\texttt{chartAnnotations.ts}  & \texttt{getPatientLimitMarkers}. \\
+\texttt{chartHover.ts}        & Hover snapshot / snap / interpolation
+                                 helpers used by \texttt{CurveChart}. \\
+\texttt{clinicalSummary.ts}   & \texttt{deriveClinicalMeasurements}
+                                 (FD at $x=0$, associated phoria). \\
+\texttt{exportChart.ts}       & \texttt{renderSvgToPngDataUrl},
+                                 \texttt{exportSvgToPng}. \\
+\texttt{pdfReport.ts}         & jsPDF composition for the exported report. \\
+\bottomrule
+\end{longtable}
+
+% =====================================================
+\section{API Documentation}
+\label{sec:api}
+
+\subsection{\texttt{GET /api/v1/health}}
+\textbf{Purpose:} liveness probe.
+
+\textbf{Response 200:}
+\begin{lstlisting}[language=json]
+{ "status": "ok" }
+\end{lstlisting}
+
+\subsection{\texttt{POST /api/v1/compute}}
+\textbf{Purpose:} fit all four FDC models to 7 measured y-values at the fixed
+x positions $\{-15,-10,-5,0,5,10,15\}$ and return per-model metrics plus a
+classification.
+
+\textbf{Request body:}
+\begin{lstlisting}[language=json]
+{ "y": [y1, y2, y3, y4, y5, y6, y7] }
+\end{lstlisting}
+Constraints: \texttt{y} must have exactly seven finite floats.
+
+\textbf{Response 200 (shape):}
+\begin{lstlisting}[language=json]
+{
+  "x": [-15, -10, -5, 0, 5, 10, 15],
+  "measured": [{ "x": -15, "y": 0.0 }, ... ],
+  "models": {
+    "T1": {
+      "params": { "a": 0.0, "b": 0.0, "c": 0.0 },
+      "sse":  0.0,
+      "rmse": 0.0,
+      "slope": 0.0,
+      "fitted_at_x": [ 7 floats ],
+      "curve": [ { "x": -15.0, "y": 0.0 }, ... 200 points ... ]
+    },
+    "T2": { "params": { "a": 0, "b": 0, "c": 0, "d": 0 }, ... },
+    "T3": { "params": { "a": 0, "b": 0, "c": 0, "d": 0 }, ... },
+    "T4": { "params": { "a": 0, "b": 0, "c": 0, "d": 0 }, ... }
+  },
+  "classification": {
+    "best_by_sse":  "T1|T2|T3|T4",
+    "best_by_rmse": "T1|T2|T3|T4"
+  }
+}
+\end{lstlisting}
+
+\textbf{Error responses:}
+\begin{itemize}[leftmargin=1.2em]
+  \item \texttt{400} --- \texttt{ValueError} from the fitter (wrong count,
+        non-finite values) bubbles up as \texttt{\{"detail": "\ldots"\}}.
+  \item \texttt{422} --- Pydantic validation failure of the request body.
+  \item \texttt{500} --- other exceptions wrapped as
+        \texttt{\{"detail": "Computation failed: \ldots"\}}.
+\end{itemize}
+
+Interactive API docs are available when the backend is running at
+\url{http://localhost:8000/docs} (Swagger UI) and
+\url{http://localhost:8000/redoc} (ReDoc).
+
+% =====================================================
+\section{Database and Persistence}
+\label{sec:db}
+
+The application has \textbf{no persistence layer}. No ORM, no migrations,
+no schema files, no seeded data, no per-user state. Each
+\texttt{POST /api/v1/compute} is independent and produces its result
+in-memory.
+
+% =====================================================
+\section{Testing Strategy}
+\label{sec:testing}
+
+\subsection{Overall philosophy}
+The repository ships two independent test suites that can each be run in
+isolation. Both suites target \emph{pure logic} first --- the numerical
+fitter, the parsing / merging / clinical-summary helpers, the API contract
+--- and only lightly touch rendering concerns. This keeps the suites fast,
+deterministic, and valuable as regression guards during deployment.
+
+\subsection{Backend --- pytest}
+\label{subsec:backend_tests}
+
+Test files live in \texttt{backend/tests/}. Configuration is in
+\texttt{backend/pytest.ini}, which points \texttt{testpaths} at the
+\texttt{tests} folder and registers a \texttt{slow} marker for the GEKKO-backed
+integration fits (the solver run dominates the wall-clock time).
+
+Test-time dependencies are isolated in \texttt{backend/requirements-dev.txt}
+so that a production install of \texttt{requirements.txt} stays lean.
+
+\textbf{Running:}
+\begin{lstlisting}[language=bash]
+cd backend
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+pytest                          # all tests
+pytest -m "not slow"            # skip solver-backed integration tests
+\end{lstlisting}
+
+\textbf{What the suite covers:}
+\begin{itemize}[leftmargin=1.6em]
+  \item \texttt{tests/test\_fdc\_fit.py}:
+    \begin{itemize}[leftmargin=1.2em]
+      \item Metric helpers (\texttt{\_sse}, \texttt{\_rmse}) on synthetic
+            inputs.
+      \item Smooth-x grid (\texttt{\_build\_smooth\_x}) length and
+            monotonicity.
+      \item Model evaluation (\texttt{\_eval\_model}) for T1--T4 at
+            representative x values.
+      \item Paper-defined slope (\texttt{\_compute\_slope\_paper}) for
+            closed-form cases (e.g.\ cubic $\Rightarrow$ slope~$= 9$).
+      \item Input validation: wrong length, NaN, Infinity, wrong x-shape.
+      \item End-to-end \texttt{fit\_all\_models} runs against y-data drawn
+            from T1 with low amplitude; asserts envelope shape, classification
+            well-formedness, and near-zero residual SSE for the matching
+            model.
+      \item \texttt{smooth\_n} parameter controls the curve resolution.
+      \item Measured points pair correctly with \texttt{DEFAULT\_X}.
+    \end{itemize}
+  \item \texttt{tests/test\_main.py}:
+    \begin{itemize}[leftmargin=1.2em]
+      \item \texttt{GET /api/v1/health} returns \texttt{\{"status": "ok"\}}.
+      \item \texttt{POST /api/v1/compute} rejects missing body, wrong-length
+            arrays, non-numeric values, and non-finite values (status codes
+            400 or 422 depending on the validation layer that catches them).
+      \item Full success call returns the complete JSON envelope with all
+            four models and a well-formed classification block.
+    \end{itemize}
+\end{itemize}
+
+At the time of writing this documentation, the backend suite contains
+\textbf{26~tests} and runs in about~2~seconds on a modern laptop.
+
+\subsection{Frontend --- Vitest}
+\label{subsec:frontend_tests}
+
+Configured in \texttt{frontend/vitest.config.ts} with:
+\begin{itemize}[leftmargin=1.6em]
+  \item \texttt{environment: "jsdom"} (required for React Testing Library);
+  \item a shared setup file at \texttt{src/test/setup.ts} that registers
+        \texttt{@testing-library/jest-dom} matchers and runs
+        \texttt{cleanup()} between tests;
+  \item a coverage provider (\texttt{v8}) emitting \texttt{text}, \texttt{html}
+        and \texttt{lcov} reports under \texttt{coverage/}.
+\end{itemize}
+
+Test files are co-located with their source under \texttt{src/} using
+\texttt{*.test.ts} and \texttt{*.test.tsx} suffixes.
+
+\textbf{Running:}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm test                 # run all tests once
+npm run test:watch       # watch mode for development
+npm run test:coverage    # generate coverage report
+\end{lstlisting}
+
+\textbf{What the suite covers:}
+\begin{itemize}[leftmargin=1.6em]
+  \item \texttt{src/lib/input.test.ts}: both branches of
+        \texttt{validateViewingDistance} (all preset options + the custom
+        "other" path) and \texttt{parseYValues} on numeric, alphabetic, NaN,
+        and Infinity inputs.
+  \item \texttt{src/lib/chart.test.ts}: \texttt{mergeModelCurves} for null
+        input, full-length curves, and unequal-length safety truncation.
+  \item \texttt{src/lib/clinicalSummary.test.ts}:
+        \texttt{deriveClinicalMeasurements} including empty input, FD at
+        $x=0$, the nearest-non-zero phoria rule, and $-0 \to +0$
+        normalisation.
+  \item \texttt{src/lib/chartAnnotations.test.ts}:
+        \texttt{getPatientLimitMarkers} across the four zero-pattern cases at
+        $x \in \{-15, -10\}$.
+  \item \texttt{src/lib/chartHover.test.ts}: pixel-ratio-to-axis conversion,
+        measured-value lookup, snap-to-measured, exact-match snapshot,
+        linear interpolation between curve points, and snapshot equality.
+  \item \texttt{src/constants/fdc.test.ts}: axis domain, fixed x values,
+        model keys, and both preset-distance lookups via
+        \texttt{getPresetValuesForFixedX}.
+  \item \texttt{src/api/fdc.test.ts}: \texttt{computeFits} request shape,
+        JSON \texttt{detail} surfacing, raw-text fallback, and the
+        empty-body HTTP-status fallback (all using a mocked \texttt{fetch}).
+  \item \texttt{src/components/MetricsTable.test.tsx}: placeholder state,
+        per-model rows with 3-decimal metric formatting, and the
+        \texttt{metric-table\_\_row--active} highlight for the best-by-SSE
+        row.
+  \item \texttt{src/components/ClassificationCard.test.tsx}: placeholder
+        state, selected-model label + slope, fixation disparity at $x=0$,
+        and the nearest-non-zero associated phoria readout.
+\end{itemize}
+
+At the time of writing this documentation, the frontend suite contains
+\textbf{56~tests} across 9~test files and runs in about~2~seconds with a
+cold cache.
+
+\subsection{What is intentionally \emph{not} covered}
+\begin{itemize}[leftmargin=1.6em]
+  \item No visual regression tests (no Storybook / Chromatic / Percy
+        integration in the repo).
+  \item No full end-to-end browser tests (no Playwright / Cypress).
+  \item No explicit CI runner; tests are launched manually or by a local
+        commit hook.
+  \item PDF report generation (\texttt{pdfReport.ts}) is not unit-tested
+        because jsPDF's output depends on installed fonts and a real canvas;
+        manual smoke-testing is recommended on the target environment.
+\end{itemize}
+
+% =====================================================
+\section{Build, Lint and Type-Checking Workflow}
+\label{sec:qa}
+
+\subsection{Type-checking}
+Run via \texttt{npm run build} in \texttt{frontend/}, which chains
+\texttt{tsc -b} (project references across \texttt{tsconfig.app.json} and
+\texttt{tsconfig.node.json}, both with \texttt{strict: true},
+\texttt{noUnusedLocals}, \texttt{noUnusedParameters},
+\texttt{noFallthroughCasesInSwitch} and \texttt{noUncheckedSideEffectImports})
+before \texttt{vite build}.
+
+\subsection{Linting}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm run lint
+\end{lstlisting}
+Configuration lives in \texttt{frontend/eslint.config.js}.
+
+\subsection{Formatter}
+\emph{No Prettier or equivalent configuration was found.}
+
+\subsection{Coverage}
+Generated on demand via \texttt{npm run test:coverage}; output is written to
+\texttt{frontend/coverage/} (not committed to the repository).
+
+% =====================================================
+\section{Deployment Guide}
+\label{sec:deploy}
+
+This section documents how to deploy the application. The repository does
+\emph{not} include deployment automation, containerisation, or pipeline
+definitions, so deployment is described here as a \emph{manual, self-hosted
+process} based on a static frontend build and a separately executed FastAPI
+backend. The procedure is written to be reproducible by anyone with basic
+Linux server administration skills.
+
+\subsection{Supported deployment models}
+\label{subsec:supported_deployment_models}
+
+Three deployment models are practical for this project. They are listed in
+order of increasing operational maturity.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Single-host manual deployment} (Nginx + Uvicorn
+        + systemd on one Linux server). Recommended for academic review
+        and demonstrations. This is the model documented in detail below.
+  \item \textbf{Single-host Dockerised deployment} (a custom Dockerfile for
+        each tier, or a single multi-stage image). Not included in the repo
+        but straightforward to add; deferred to a future phase.
+  \item \textbf{Cloud PaaS deployment} (e.g.\ frontend on Netlify/Vercel +
+        backend on Fly.io / Railway / Render). Viable because the API is
+        stateless, but requires configuring CORS for the specific hosted
+        origin.
+\end{enumerate}
+
+\subsection{CI / CD}
+\emph{Not found in repository.} There is no \texttt{.github/workflows/}, no
+\texttt{.gitlab-ci.yml}, and no other pipeline configuration.
+
+Consequently, every release must currently be validated and deployed
+manually. The presence of a local test suite (see \S\ref{sec:testing}) gives
+the operator a fast pre-flight check before publishing, and the commands
+below include an explicit test step.
+
+\subsection{Containers}
+\emph{Not found in repository.} There is no \texttt{Dockerfile}, no
+\texttt{docker-compose.yml}, and no other container orchestration manifest.
+The deployer must prepare the server environment manually, install both
+Python and Node.js dependencies, build the frontend, and configure a web
+server / reverse proxy to connect the frontend and backend.
+
+\subsection{Production topology assumed in this document}
+\label{subsec:production_topology}
+
+\begin{itemize}[leftmargin=1.6em]
+  \item \textbf{Frontend}: Vite production build served as static files by
+        Nginx.
+  \item \textbf{Backend}: FastAPI served by Uvicorn, bound locally on
+        \texttt{127.0.0.1:8000}, kept alive by a \texttt{systemd} unit.
+  \item \textbf{Reverse proxy}: Nginx forwards \texttt{/api/*} to the
+        backend.
+  \item \textbf{Public access}: a single domain name or server IP exposes
+        both the website and the API.
+  \item \textbf{Transport security}: Let's Encrypt TLS via
+        \texttt{certbot --nginx} (recommended; not codified in the repo).
+\end{itemize}
+
+This topology is especially appropriate for the current project because the
+frontend is a static SPA, the backend is stateless, the API surface is small,
+there is no authentication subsystem, and the repository already uses
+relative API paths that fit well behind a reverse proxy.
+
+\subsection{Step-by-step manual deployment procedure}
+\label{subsec:detailed_manual_deployment}
+
+\subsubsection{1. Server preparation}
+
+A deployment server must provide:
+
+\begin{itemize}[leftmargin=1.6em]
+  \item Python~3 and \texttt{python3-venv},
+  \item Node.js (Vite~7 requires at least Node~20.19 or 22.12) and npm,
+  \item Nginx,
+  \item sufficient permissions to install dependencies, build artefacts, and
+        configure services.
+\end{itemize}
+
+Example logical paths used throughout the procedure:
+
+\begin{itemize}[leftmargin=1.6em]
+  \item repository checkout: \texttt{/opt/fdc/TFG}
+  \item frontend static site root: \texttt{/var/www/fdc}
+\end{itemize}
+
+On Debian / Ubuntu:
+
+\begin{lstlisting}[language=bash]
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip \
+                    nodejs npm nginx
+\end{lstlisting}
+
+If the distribution-shipped Node.js is older than the version required by
+Vite, install a newer release (e.g.\ via \texttt{NodeSource} or \texttt{nvm})
+before building the frontend.
+
+\subsubsection{2. Repository checkout}
+
+\begin{lstlisting}[language=bash]
+sudo mkdir -p /opt/fdc
+sudo chown -R $USER:$USER /opt/fdc
+cd /opt/fdc
+git clone <repository-url> TFG
+\end{lstlisting}
+
+\subsubsection{3. Backend installation, tests and validation}
+
+Install the backend in an isolated virtual environment:
+
+\begin{lstlisting}[language=bash]
+cd /opt/fdc/TFG/backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -r requirements-dev.txt    # test deps only
+\end{lstlisting}
+
+Run the backend test suite before deploying. Passing tests mean the installed
+dependencies are usable on this server:
+
+\begin{lstlisting}[language=bash]
+pytest
+\end{lstlisting}
+
+Smoke-start the backend manually:
+
+\begin{lstlisting}[language=bash]
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+\end{lstlisting}
+
+In a separate terminal, verify the health endpoint:
+
+\begin{lstlisting}[language=bash]
+curl http://127.0.0.1:8000/api/v1/health
+# Expected response: {"status":"ok"}
+\end{lstlisting}
+
+Stop the manual process once health is green.
+
+\subsubsection{4. Backend as a persistent service (systemd)}
+
+Create \texttt{/etc/systemd/system/fdc-backend.service}:
+
+\begin{lstlisting}
+[Unit]
+Description=TFG FDC FastAPI backend (uvicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/fdc/TFG/backend
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/fdc/TFG/backend/.venv/bin/uvicorn \
+          app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+\end{lstlisting}
+
+Activate:
+
+\begin{lstlisting}[language=bash]
+sudo systemctl daemon-reload
+sudo systemctl enable --now fdc-backend
+sudo systemctl status fdc-backend
+\end{lstlisting}
+
+\subsubsection{5. Frontend build, tests and publish}
+
+Install dependencies, run the test suite, then produce the optimised bundle:
+
+\begin{lstlisting}[language=bash]
+cd /opt/fdc/TFG/frontend
+npm ci                        # reproducible install from package-lock.json
+npm test                      # must exit 0
+npm run build                 # emits frontend/dist/
+\end{lstlisting}
+
+Copy the static output to the Nginx document root:
+
+\begin{lstlisting}[language=bash]
+sudo mkdir -p /var/www/fdc
+sudo rsync -av --delete \
+     /opt/fdc/TFG/frontend/dist/ /var/www/fdc/
+\end{lstlisting}
+
+\subsubsection{6. Reverse-proxy configuration (Nginx)}
+
+Create \texttt{/etc/nginx/sites-available/fdc.conf}:
+
+\begin{lstlisting}
+server {
+    listen 80;
+    server_name fdc.example.org;   # replace with your domain
+
+    root /var/www/fdc;
+    index index.html;
+
+    # SPA routing: unknown paths fall back to index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API traffic is proxied to the FastAPI backend.
+    location /api/ {
+        proxy_pass         http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    # Cache immutable Vite bundle assets aggressively.
+    location /assets/ {
+        expires 30d;
+        access_log off;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+    }
+}
+\end{lstlisting}
+
+Enable and reload:
+
+\begin{lstlisting}[language=bash]
+sudo ln -s /etc/nginx/sites-available/fdc.conf \
+          /etc/nginx/sites-enabled/fdc.conf
+sudo nginx -t
+sudo systemctl reload nginx
+\end{lstlisting}
+
+\subsubsection{7. HTTPS enablement (recommended)}
+
+Public deployments should terminate TLS at Nginx. Using
+\texttt{certbot}:
+
+\begin{lstlisting}[language=bash]
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d fdc.example.org
+\end{lstlisting}
+
+Certbot rewrites the Nginx server block to listen on 443 with a trusted
+certificate and sets up auto-renewal via a systemd timer.
+
+\subsection{Repository-specific deployment considerations}
+\label{subsec:repo_specific_deployment_considerations}
+
+\subsubsection{CORS configuration}
+The backend currently whitelists only \texttt{http://localhost:5173}. Before
+publishing, edit \texttt{backend/app/main.py} so \texttt{allow\_origins}
+matches the production origin exactly, for example:
+
+\begin{lstlisting}[language=Python]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://fdc.example.org"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+\end{lstlisting}
+
+If the frontend and backend are served from the same origin (as in the
+recommended Nginx reverse-proxy topology), CORS is technically unnecessary,
+but keeping the whitelist aligned with the canonical domain is still good
+hygiene.
+
+\subsubsection{Frontend API path behaviour}
+The frontend uses relative paths (\texttt{/api/v1/compute}). This is
+beneficial for deployment: the compiled bundle does not need to know the
+backend URL, and Nginx handles routing transparently.
+
+\subsubsection{Development proxy vs.\ production routing}
+The Vite proxy only applies during \texttt{npm run dev}. In production,
+Nginx is the sole traffic router; a deployment that serves only the static
+frontend files without configuring \texttt{/api/} routing will produce
+browser 404s.
+
+\subsubsection{Encoding of \texttt{requirements.txt}}
+In some snapshots the file may have been saved as UTF-16 (note the BOM and
+wide spacing). If \texttt{pip install -r requirements.txt} misbehaves, rewrite
+the file as UTF-8 (one package per line, no BOM) before deployment.
+
+\subsubsection{Local development artefacts}
+\texttt{backend/.venv/}, \texttt{frontend/node\_modules/} and
+\texttt{frontend/dist/} should \emph{not} be treated as authoritative
+deployment artefacts. A clean deployment rebuilds the virtualenv and the
+bundle from the declared manifest files:
+
+\begin{itemize}[leftmargin=1.6em]
+  \item \texttt{backend/requirements.txt}
+  \item \texttt{backend/requirements-dev.txt}
+  \item \texttt{frontend/package.json} + \texttt{frontend/package-lock.json}
+\end{itemize}
+
+\subsection{Release procedure}
+\label{subsec:release_procedure}
+
+Recommended manual release checklist:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Fetch the latest commits on the server
+        (\texttt{git -C /opt/fdc/TFG pull}).
+  \item Recreate or update the backend virtualenv if
+        \texttt{requirements.txt} changed.
+  \item \texttt{pip install -r requirements.txt} (and
+        \texttt{requirements-dev.txt} if you want to run the tests on the
+        server).
+  \item Run the backend test suite:
+        \texttt{cd backend \&\& pytest}.
+  \item \texttt{npm ci} in \texttt{frontend/} if \texttt{package-lock.json}
+        changed.
+  \item Run the frontend test suite: \texttt{npm test}.
+  \item Generate a fresh bundle: \texttt{npm run build}.
+  \item Publish the static files:
+        \texttt{sudo rsync -av --delete frontend/dist/ /var/www/fdc/}.
+  \item Restart the backend service:
+        \texttt{sudo systemctl restart fdc-backend}.
+  \item Reload Nginx if its config changed:
+        \texttt{sudo systemctl reload nginx}.
+  \item Run the post-release smoke test (see below).
+\end{enumerate}
+
+\subsubsection*{Post-release smoke test}
+\begin{enumerate}[leftmargin=1.6em]
+  \item \texttt{curl https://fdc.example.org/api/v1/health} returns
+        \texttt{\{"status":"ok"\}}.
+  \item Load the site in a browser: the page renders, the input panel
+        prefills on the \texttt{40\,cm} preset, and "Run Statistical Fit"
+        succeeds.
+  \item The classification card, metrics table and chart populate with the
+        expected four curves and scatter points.
+  \item "Export High-Res PNG" downloads a non-empty PNG.
+  \item "Export PDF Report" downloads a non-empty PDF.
+\end{enumerate}
+
+\subsection{Rollback considerations}
+\label{subsec:rollback_considerations}
+
+Because the application is stateless (no database, no schema migrations),
+rollback is simple:
+
+\begin{itemize}[leftmargin=1.6em]
+  \item Keep the previously deployed \texttt{dist/} directory under a
+        timestamped backup (e.g.\ \texttt{/var/www/fdc.backup-2026-04-19/})
+        before replacing it.
+  \item Tag every production release in git
+        (e.g.\ \texttt{git tag prod-2026-04-19 \&\& git push --tags}).
+  \item If a release fails, \texttt{rsync} the backup back into
+        \texttt{/var/www/fdc/} and check out the previous tag on the server
+        before restarting the backend.
+\end{itemize}
+
+\subsection{Summary}
+\label{subsec:deployment_summary}
+
+The repository supports deployment as a conventional two-tier web
+application composed of:
+
+\begin{itemize}[leftmargin=1.6em]
+  \item a static Vite frontend served by Nginx,
+  \item a FastAPI backend served by Uvicorn under systemd,
+  \item and a reverse proxy joining both under one public origin, with TLS
+        terminated at Nginx.
+\end{itemize}
+
+The deployment process is fully manual today. The absence of CI/CD,
+containers and infrastructure-as-code means that reproducibility depends on
+careful operator execution. Because the application is stateless, compact
+and based on standard technologies, it remains straightforward to deploy on
+a standard Linux server with Nginx and Uvicorn; the test suites
+(\S\ref{sec:testing}) provide a fast pre-flight check to catch environment
+regressions before publishing.
+
+% =====================================================
+\section{Troubleshooting}
+\label{sec:trouble}
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{404 on \texttt{/api/v1/compute} from the SPA.} In development
+        the Vite proxy is hard-coded to \texttt{http://localhost:8000};
+        ensure the backend is running there. In production, ensure
+        Nginx's \texttt{location /api/} block is enabled.
+  \item \textbf{CORS error in the browser.} The backend whitelists only
+        \texttt{http://localhost:5173} by default. Update
+        \texttt{allow\_origins} in \texttt{backend/app/main.py} if you use a
+        different host, port, or production domain.
+  \item \textbf{GEKKO install or runtime errors.} GEKKO ships a
+        platform-specific solver; ensure your Python / OS match a supported
+        wheel.
+  \item \textbf{\texttt{400 Expected exactly 7 y values} /
+        \texttt{All y values must be finite numbers}.} Fill all seven fields
+        with finite numeric values; empty, non-numeric, NaN or Infinity
+        entries are rejected.
+  \item \textbf{Stale computation shown after changing inputs.} The SPA uses
+        a version counter to discard stale responses (see
+        \texttt{computationVersionRef} in \texttt{App.tsx}); rerun the fit
+        if one slips through.
+  \item \textbf{Ports 5173 / 8000 already in use.} Stop the conflicting
+        process or pass \texttt{--port} to \texttt{vite} / \texttt{uvicorn},
+        and update the corresponding hardcoded origin / proxy.
+  \item \textbf{Tests fail on first run.} Make sure the correct interpreter
+        is active (\texttt{which python}, \texttt{which node}) and that
+        \texttt{pip install -r requirements-dev.txt} / \texttt{npm ci} were
+        run from their respective directories.
+\end{itemize}
+
+% =====================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+The repository delivers a coherent, self-contained Phase~1 implementation of
+a Fixation Disparity Curve analysis tool: a small but typed and validated
+FastAPI backend that performs constrained nonlinear fits with GEKKO, and a
+focused React~19 + Vite SPA that renders the results, surfaces the clinical
+summary, and supports PNG / PDF export. The codebase is intentionally lean
+--- no database, no authentication, no containerisation, no CI --- which
+keeps the current scope aligned with the Phase~1 requirements captured in
+\texttt{docs/README.md}. Automated tests on both sides (26 backend + 56
+frontend) safeguard the numerical core, the HTTP contract, and the UI
+helpers against regressions during deployment and future evolution.
+
+\end{document}

@@ -1,276 +1,338 @@
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import "./App.css";
+import { computeFits } from "./api/fdc";
+import { AdvancedMetricsSection } from "./components/AdvancedMetricsSection";
+import { ClassificationCard } from "./components/ClassificationCard";
+import { ClinicalReportChart } from "./components/ClinicalReportChart";
+import { CurveChart } from "./components/CurveChart";
+import { HoverReadoutPanel } from "./components/HoverReadoutPanel";
+import type { HoverSnapshot } from "./types/fdc";
+import { InputPanel } from "./components/InputPanel";
+import { PageHeader } from "./components/PageHeader";
+import { PdfExportDialog } from "./components/PdfExportDialog";
+import { FIXED_X_VALUES, getPresetValuesForFixedX } from "./constants/fdc";
+import { mergeModelCurves } from "./lib/chart";
+import { exportSvgToPng, renderSvgToPngDataUrl } from "./lib/exportChart";
+import { parseYValues, validateViewingDistance } from "./lib/input";
 import {
-  ComposedChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Scatter,
-  ReferenceLine, // <-- Added this import
-} from "recharts";
+  EMPTY_REPORT_SUBJECT_DETAILS,
+  exportClinicalReportPdf,
+  type ReportSubjectDetails,
+} from "./lib/pdfReport";
+import type {
+  ComputeResponse,
+  PresetViewingDistance,
+  ViewingDistance,
+} from "./types/fdc";
 
-type Point = { x: number; y: number };
-type ModelKey = "T1" | "T2" | "T3" | "T4";
+type ExportDialogStep = "choice" | "details" | null;
 
-type ComputeResponse = {
-  x: number[];
-  measured: Point[];
-  models: Record<
-    ModelKey,
-    {
-      params: Record<string, number>;
-      sse: number;
-      rmse: number;
-      slope: number;
-      fitted_at_x: number[];
-      curve: Point[];
-    }
-  >;
-  classification: {
-    best_by_sse: ModelKey;
-    best_by_rmse: ModelKey;
-  };
-};
+function waitForNextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
 
 export default function App() {
-  const fixedX = useMemo(() => [-15, -10, -5, 0, 5, 10, 15], []);
-  const [yVals, setYVals] = useState<string[]>(Array(7).fill(""));
-  const [resp, setResp] = useState<ComputeResponse | null>(null);
+  const computationVersionRef = useRef(0);
+  const emptyYValues = useMemo(
+    () => Array(FIXED_X_VALUES.length).fill(""),
+    [],
+  );
+  const [viewingDistance, setViewingDistance] = useState<ViewingDistance | "">(
+    "",
+  );
+  const [customDistance, setCustomDistance] = useState("");
+  const [customDistanceTouched, setCustomDistanceTouched] = useState(false);
+  const [yValues, setYValues] = useState<string[]>(() => emptyYValues);
+  const [response, setResponse] = useState<ComputeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  const chartRef = useRef<HTMLDivElement>(null);
+  const [hoverSnapshot, setHoverSnapshot] = useState<HoverSnapshot | null>(null);
+  const [exportDialogStep, setExportDialogStep] = useState<ExportDialogStep>(null);
+  const [reportSubjectDetails, setReportSubjectDetails] =
+    useState<ReportSubjectDetails>({ ...EMPTY_REPORT_SUBJECT_DETAILS });
+  const [exportDialogError, setExportDialogError] = useState<string | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const pdfChartRef = useRef<HTMLDivElement | null>(null);
 
-  const onChange = (i: number, v: string) => {
-    const next = [...yVals];
-    next[i] = v;
-    setYVals(next);
+  const mergedCurve = useMemo(() => mergeModelCurves(response), [response]);
+  const bestModel = response?.classification.best_by_sse ?? null;
+
+  useEffect(() => {
+    setHoverSnapshot(null);
+    if (response === null) {
+      setExportDialogStep(null);
+      setExportDialogError(null);
+      setReportSubjectDetails({ ...EMPTY_REPORT_SUBJECT_DETAILS });
+    }
+  }, [response]);
+
+  const resetComputedResults = () => {
+    computationVersionRef.current += 1;
+    setResponse(null);
+    setLoading(false);
   };
 
-  const compute = async () => {
+  const handleInputChange = (index: number, value: string) => {
     setError(null);
-    const parsed = yVals.map((v) => Number(v));
-    if (parsed.some((n) => Number.isNaN(n) || !Number.isFinite(n))) {
-      setError("Please ensure all inputs contain valid numbers.");
+    setYValues((current) =>
+      current.map((entry, entryIndex) =>
+        entryIndex === index ? value : entry,
+      ),
+    );
+  };
+
+  const handleDistanceChange = (nextDistance: ViewingDistance | "") => {
+    resetComputedResults();
+    setError(null);
+    setViewingDistance(nextDistance);
+    setCustomDistanceTouched(false);
+
+    if (nextDistance === "40cm" || nextDistance === "25cm") {
+      setYValues(
+        getPresetValuesForFixedX(nextDistance as PresetViewingDistance),
+      );
+      return;
+    }
+
+    setYValues(emptyYValues);
+  };
+
+  const handleCustomDistanceChange = (value: string) => {
+    if (viewingDistance === "other") {
+      resetComputedResults();
+    }
+    setError(null);
+    setCustomDistance(value);
+  };
+
+  const handleCustomDistanceBlur = () => {
+    setCustomDistanceTouched(true);
+  };
+
+  const handleCompute = async () => {
+    setError(null);
+
+    const viewingDistanceValidation = validateViewingDistance(
+      viewingDistance,
+      customDistance,
+    );
+    if (!viewingDistanceValidation.ok) {
+      if (viewingDistanceValidation.field === "customDistance") {
+        setCustomDistanceTouched(true);
+      }
+      return;
+    }
+
+    const parsed = parseYValues(yValues);
+    if (!parsed.ok) {
+      setError(parsed.error);
       return;
     }
 
     setLoading(true);
-    try {
-      const r = await fetch("/api/v1/compute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ y: parsed }),
-      });
+    const computationVersion = computationVersionRef.current + 1;
+    computationVersionRef.current = computationVersion;
 
-      if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
-      setResp((await r.json()) as ComputeResponse);
-    } catch (e: any) {
-      setError(e?.message ?? "Computation error.");
+    try {
+      const nextResponse = await computeFits(parsed.values);
+      if (computationVersionRef.current === computationVersion) {
+        setResponse(nextResponse);
+      }
+    } catch (requestError) {
+      if (computationVersionRef.current === computationVersion) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Computation error.",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (computationVersionRef.current === computationVersion) {
+        setLoading(false);
+      }
     }
   };
 
-  const mergedCurve = useMemo(() => {
-    if (!resp) return [];
-    const { T1, T2, T3, T4 } = resp.models;
-    const n = Math.min(T1.curve.length, T2.curve.length, T3.curve.length, T4.curve.length);
-    return Array.from({ length: n }, (_, i) => ({
-      x: T1.curve[i].x,
-      T1: T1.curve[i].y,
-      T2: T2.curve[i].y,
-      T3: T3.curve[i].y,
-      T4: T4.curve[i].y,
-    }));
-  }, [resp]);
-
-  const downloadImage = useCallback(() => {
-    const svg = chartRef.current?.querySelector("svg");
-    if (!svg) return;
-
-    const serializer = new XMLSerializer();
-    const source = '<?xml version="1.0" standalone="no"?>\r\n' + serializer.serializeToString(svg);
-    const image = new Image();
-    image.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
-
-    image.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = svg.clientWidth * 2;
-      canvas.height = svg.clientHeight * 2;
-      const context = canvas.getContext("2d");
-      if (context) {
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.scale(2, 2);
-        context.drawImage(image, 0, 0);
-        const link = document.createElement("a");
-        link.download = "Fixation_Disparity_Analysis.png";
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      }
-    };
+  const resetExportDialog = useCallback(() => {
+    setExportDialogStep(null);
+    setExportDialogError(null);
+    setReportSubjectDetails({ ...EMPTY_REPORT_SUBJECT_DETAILS });
   }, []);
 
+  const handlePngExport = useCallback(async () => {
+    setError(null);
+    const didExport = await exportSvgToPng(
+      chartRef.current,
+      "Fixation_Disparity_Analysis.png",
+    );
+
+    if (!didExport) {
+      setError("PNG export could not be generated.");
+    }
+  }, []);
+
+  const buildPdfReport = useCallback(
+    async (subjectDetails: ReportSubjectDetails) => {
+      if (response === null || bestModel === null) {
+        return false;
+      }
+
+      setExportDialogError(null);
+      setIsExportingPdf(true);
+
+      try {
+        await waitForNextPaint();
+        const chartImage = await renderSvgToPngDataUrl(pdfChartRef.current, {
+          backgroundColor: "#ffffff",
+          scale: 3,
+        });
+
+        if (chartImage === null) {
+          throw new Error("The report chart could not be prepared for PDF export.");
+        }
+
+        exportClinicalReportPdf({
+          bestModel,
+          chartImage,
+          slope: response.models[bestModel].slope,
+          subjectDetails,
+        });
+
+        return true;
+      } catch (exportError) {
+        setExportDialogError(
+          exportError instanceof Error
+            ? exportError.message
+            : "PDF export could not be generated.",
+        );
+        return false;
+      } finally {
+        setIsExportingPdf(false);
+      }
+    },
+    [bestModel, response],
+  );
+
+  const handleOpenPdfDialog = useCallback(() => {
+    setExportDialogError(null);
+    setReportSubjectDetails({ ...EMPTY_REPORT_SUBJECT_DETAILS });
+    setExportDialogStep("choice");
+  }, []);
+
+  const handleClosePdfDialog = useCallback(() => {
+    if (isExportingPdf) {
+      return;
+    }
+
+    resetExportDialog();
+  }, [isExportingPdf, resetExportDialog]);
+
+  const handleChoosePdfWithoutDetails = useCallback(async () => {
+    const didExport = await buildPdfReport({
+      ...EMPTY_REPORT_SUBJECT_DETAILS,
+    });
+
+    if (didExport) {
+      resetExportDialog();
+    }
+  }, [buildPdfReport, resetExportDialog]);
+
+  const handleChoosePdfWithDetails = useCallback(() => {
+    setExportDialogError(null);
+    setExportDialogStep("details");
+  }, []);
+
+  const handleReportSubjectDetailChange = useCallback(
+    (field: keyof ReportSubjectDetails, value: string) => {
+      setReportSubjectDetails((current) => ({
+        ...current,
+        [field]: value,
+      }));
+    },
+    [],
+  );
+
+  const handleSubmitPdfDetails = useCallback(async () => {
+    const didExport = await buildPdfReport(reportSubjectDetails);
+
+    if (didExport) {
+      resetExportDialog();
+    }
+  }, [buildPdfReport, reportSubjectDetails, resetExportDialog]);
+
   return (
-    <div style={{ 
-      display: "flex", 
-      flexDirection: "column", 
-      width: "100vw", 
-      height: "100vh", 
-      overflow: "hidden", 
-      background: "#f8f9fa", 
-      fontFamily: "'Inter', sans-serif" 
-    }}>
-      {/* Header */}
-      <header style={{ 
-        padding: "16px 32px", 
-        background: "#fff", 
-        borderBottom: "1px solid #dee2e6", 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center" 
-      }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "20px", color: "#212529" }}>Thesis: Fixation Disparity Curve Modeling</h1>
-          <span style={{ fontSize: "12px", color: "#6c757d" }}>Mathematical optimization of T1–T4 non-linear fits</span>
+    <div className="app-shell">
+      <PageHeader />
+
+      <div className="app-body">
+        <div className="app-sidebar-column">
+          <InputPanel
+            customDistance={customDistance}
+            customDistanceTouched={customDistanceTouched}
+            error={error}
+            loading={loading}
+            selectedDistance={viewingDistance}
+            xValues={FIXED_X_VALUES}
+            yValues={yValues}
+            onChange={handleInputChange}
+            onCustomDistanceBlur={handleCustomDistanceBlur}
+            onCustomDistanceChange={handleCustomDistanceChange}
+            onDistanceChange={handleDistanceChange}
+            onSubmit={handleCompute}
+          />
+          <HoverReadoutPanel
+            bestModel={bestModel}
+            className="app-hover-readout"
+            hoverSnapshot={hoverSnapshot}
+          />
         </div>
-        {resp && (
-          <button onClick={downloadImage} style={{
-            padding: "8px 16px", background: "#0d6efd", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 500
-          }}>
-            Export High-Res PNG
-          </button>
-        )}
-      </header>
 
-      {/* Main Content Area */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        
-        {/* Left Sidebar: Inputs */}
-        <aside style={{ width: "350px", background: "#fff", borderRight: "1px solid #dee2e6", padding: "24px", overflowY: "auto" }}>
-          <h2 style={{ fontSize: "16px", marginBottom: "20px", color: "#495057" }}>Input</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {fixedX.map((x, i) => (
-              <div key={x} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#6c757d" }}>
-                  x = {x}
-                </label>
-                <input
-                  type="number"
-                  value={yVals[i]}
-                  onChange={(e) => onChange(i, e.target.value)}
-                  placeholder="Patient's input"
-                  style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ced4da", outline: "none" }}
-                />
-              </div>
-            ))}
-          </div>
+        <main className="dashboard">
+          <section className="dashboard-grid">
+            <ClassificationCard result={response} />
+            <AdvancedMetricsSection result={response} />
+          </section>
 
-          <button onClick={compute} disabled={loading} style={{
-            width: "100%", marginTop: "24px", padding: "12px", background: loading ? "#adb5bd" : "#212529", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600
-          }}>
-            {loading ? "Optimizing..." : "Run Statistical Fit"}
-          </button>
-          {error && <div style={{ marginTop: "12px", color: "#dc3545", fontSize: "13px" }}>{error}</div>}
-        </aside>
-
-        {/* Right Dashboard: Results and Plot */}
-        <main style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px", gap: "24px", overflowY: "auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            
-            {/* Performance Metrics Table */}
-            <div style={{ background: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #dee2e6", color: "#212529" }}>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#6c757d" }}>Fit Accuracy Metrics</h3>
-
-              {!resp ? (
-                <div style={{ color: "#adb5bd", fontSize: "13px", padding: "10px 0" }}>Awaiting computation...</div>
-              ) : (
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", color: "#212529" }}>
-                  <thead>
-                    <tr style={{ textAlign: "left", borderBottom: "1px solid #eee" }}>
-                      <th style={{ padding: "8px", color: "#495057", fontWeight: 700 }}>Model</th>
-                      <th style={{ padding: "8px", color: "#495057", fontWeight: 700 }}>SSE</th>
-                      <th style={{ padding: "8px", color: "#495057", fontWeight: 700 }}>RMSE</th>
-                      <th style={{ padding: "8px", color: "#495057", fontWeight: 700 }}>Slope</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(["T1", "T2", "T3", "T4"] as const).map((k) => (
-                      <tr key={k} style={{ background: resp.classification.best_by_sse === k ? "#f8f9fa" : "transparent" }}>
-                        <td style={{ padding: "10px", fontWeight: 700, color: "#212529" }}>{k.replace("T", "Type ")}</td>
-                        <td style={{ padding: "10px", color: "#212529" }}>{resp.models[k].sse.toFixed(3)}</td>
-                        <td style={{ padding: "10px", color: "#212529" }}>{resp.models[k].rmse.toFixed(3)}</td>
-                        <td style={{ padding: "10px", color: "#212529" }}>{resp.models[k].slope.toFixed(3)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Diagnostic Classification */}
-            <div style={{ background: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #dee2e6", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#6c757d" }}>Classification</h3>
-              {resp ? (
-                <div style={{ fontSize: "28px", fontWeight: 800, color: "#0d6efd" }}>
-                  {resp.classification.best_by_sse.replace("T", "Type ")}
-                  <span style={{ display: "block", fontSize: "12px", fontWeight: 400, color: "#6c757d", marginTop: "4px" }}>
-                    Selected as the primary clinical model based on Sum of Squared Errors (SSE)
-                  </span>
-                </div>
-              ) : <div style={{ color: "#adb5bd", fontSize: "13px" }}>Run analysis to classify...</div>}
-            </div>
-          </div>
-
-          {/* Large Graph Area */}
-          <div style={{ flex: 1, background: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #dee2e6", minHeight: "500px" }}>
-            <h3 style={{ margin: "0 0 20px 0", fontSize: "14px", color: "#6c757d" }}>Regression Visualization</h3>
-            <div ref={chartRef} style={{ width: "100%", height: "90%" }}>
-              <ResponsiveContainer>
-                <ComposedChart data={mergedCurve} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f3f5" />
-                  
-                  {/* UPDATED X-AXIS */}
-                  <XAxis 
-                    dataKey="x" 
-                    type="number" 
-                    domain={[-20, 20]} 
-                    ticks={[-20, -15, -10, -5, 0, 5, 10, 15, 20]}
-                    label={{ value: "Input", position: "bottom", offset: 20 }}
-                  />
-                  
-                  {/* UPDATED Y-AXIS */}
-                  <YAxis 
-                    type="number"
-                    domain={[-20, 20]}
-                    ticks={[-20, -15, -10, -5, 0, 5, 10, 15, 20]}
-                    label={{ value: "Patient's input", angle: -90, position: "insideLeft", offset: 0 }}
-                    stroke="#adb5bd"
-                  />
-
-                  {/* CROSSHAIR REFERENCE LINES (x=0, y=0) */}
-                  <ReferenceLine x={0} stroke="#adb5bd" strokeWidth={1.5} />
-                  <ReferenceLine y={0} stroke="#adb5bd" strokeWidth={1.5} />
-                  
-                  <Tooltip contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
-                  <Legend verticalAlign="top" align="right" iconType="circle" />
-                  
-                  <Line name="Type I" type="monotone" dataKey="T1" dot={false} stroke="#e63946" strokeWidth={3} isAnimationActive={false} />
-                  <Line name="Type II" type="monotone" dataKey="T2" dot={false} stroke="#457b9d" strokeWidth={3} isAnimationActive={false} />
-                  <Line name="Type III" type="monotone" dataKey="T3" dot={false} stroke="#2a9d8f" strokeWidth={3} isAnimationActive={false} />
-                  <Line name="Type IV" type="monotone" dataKey="T4" dot={false} stroke="#a8dadc" strokeWidth={3} isAnimationActive={false} />
-                  
-                  <Scatter name="Measured Data" data={resp?.measured} fill="#212529" dataKey="y" />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <CurveChart
+            bestModel={bestModel}
+            canExport={Boolean(response)}
+            chartRef={chartRef}
+            data={mergedCurve}
+            measured={response?.measured ?? []}
+            onExportPdf={handleOpenPdfDialog}
+            onExportPng={handlePngExport}
+            onHoverSnapshotChange={setHoverSnapshot}
+          />
         </main>
       </div>
+
+      <PdfExportDialog
+        details={reportSubjectDetails}
+        error={exportDialogError}
+        isOpen={exportDialogStep !== null}
+        isSubmitting={isExportingPdf}
+        onChange={handleReportSubjectDetailChange}
+        onChooseDetails={handleChoosePdfWithDetails}
+        onChooseNoDetails={handleChoosePdfWithoutDetails}
+        onClose={handleClosePdfDialog}
+        onSubmit={handleSubmitPdfDetails}
+        step={exportDialogStep}
+      />
+
+      {response !== null && bestModel !== null ? (
+        <div aria-hidden="true" className="report-export-stage">
+          <div ref={pdfChartRef} className="report-export-stage__inner">
+            <ClinicalReportChart
+              bestModel={bestModel}
+              data={mergedCurve}
+              measured={response.measured}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
