@@ -1,0 +1,4 @@
+# Test-time only dependencies. Kept separate from requirements.txt so the
+# runtime image does not pull pytest / httpx into production.
+pytest==9.0.3
+httpx==0.28.1

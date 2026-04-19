@@ -5,7 +5,7 @@ An interactive web application for fitting, visualizing and classifying **Fixati
 Reference paper (linked from `docs/`):
 <https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf>
 
-> This is **Phase 1** of the TFG: an end-to-end web app that visualizes FDCs and classifies them into types T1–T4 via polynomial/nonlinear approximation and error comparison.
+> This is **Phase 1** of the TFG (see [`docs/README.md`](docs/README.md)): an end-to-end web app that visualizes FDCs and classifies them into types T1–T4 via polynomial/nonlinear approximation and error comparison.
 
 ---
 
@@ -88,7 +88,13 @@ TFG/
 │   │   ├── main.py                  # FastAPI app, CORS, routes
 │   │   └── services/
 │   │       └── fdc_fit.py           # GEKKO fitting, SSE/RMSE/slope
-│   └── requirements.txt             # Pinned Python deps
+│   ├── tests/
+│   │   ├── conftest.py              # Adds backend/ to sys.path for tests
+│   │   ├── test_fdc_fit.py          # Unit + integration tests for the fitter
+│   │   └── test_main.py             # HTTP tests via FastAPI TestClient
+│   ├── pytest.ini                   # pytest config (testpaths, markers)
+│   ├── requirements.txt             # Pinned runtime Python deps
+│   └── requirements-dev.txt         # Test-time deps (pytest, httpx)
 ├── frontend/
 │   ├── images/UPC_Logo.png          # Header logo
 │   ├── public/vite.svg
@@ -108,12 +114,15 @@ TFG/
 │   │   │   ├── exportChart.ts       # SVG → PNG export
 │   │   │   └── input.ts             # Validation helpers
 │   │   ├── types/fdc.ts             # Shared TS types
+│   │   ├── test/setup.ts            # Vitest setup (jest-dom, cleanup)
+│   │   ├── **/*.test.ts{,x}         # Co-located Vitest tests
 │   │   ├── App.tsx                  # Root component, orchestration
 │   │   └── main.tsx                 # ReactDOM entry
 │   ├── index.html
 │   ├── package.json
 │   ├── tsconfig*.json
 │   ├── vite.config.ts               # /api → http://localhost:8000
+│   ├── vitest.config.ts             # jsdom env, coverage, setup file
 │   └── eslint.config.js
 └── docs/
     ├── README.md                    # Phase 1 requirements
@@ -213,8 +222,19 @@ All scripts declared in `frontend/package.json`:
 | `npm run build` | `tsc -b && vite build` | Project-reference type-check then production build. |
 | `npm run lint`  | `eslint .`         | Lint the frontend sources.                           |
 | `npm run preview` | `vite preview`   | Serve the production build locally.                  |
+| `npm test`      | `vitest run`       | Run the Vitest unit-test suite once and exit.         |
+| `npm run test:watch` | `vitest`      | Run Vitest in watch mode during development.          |
+| `npm run test:coverage` | `vitest run --coverage` | Run Vitest and emit an lcov / html coverage report under `coverage/`. |
 
-The backend has **no script manifest** (no Makefile, no `pyproject.toml` scripts). Use `uvicorn` directly as shown above.
+The backend has **no script manifest** (no Makefile, no `pyproject.toml` scripts). Use `uvicorn` or `pytest` directly:
+
+```bash
+cd backend
+# one-off or CI install of test dependencies (only needed once):
+pip install -r requirements-dev.txt
+# run the whole Python test suite:
+pytest
+```
 
 ---
 
@@ -301,15 +321,59 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -
 - **Frontend lint**: `npm run lint` (ESLint flat config in `frontend/eslint.config.js` extending `@eslint/js` recommended, `typescript-eslint` recommended, `eslint-plugin-react-hooks` recommended-latest, `eslint-plugin-react-refresh/vite`; ignores `dist`).
 - **Frontend type-check**: executed as part of `npm run build` (`tsc -b` against the project-reference setup in `tsconfig.json` → `tsconfig.app.json` + `tsconfig.node.json`, both with `strict: true`, `noUnusedLocals`, `noUnusedParameters`).
 - **Formatter**: no Prettier configuration found in the repo.
-- **Tests**: **no test suite is present** (no `tests/`, no `vitest`/`jest`/`pytest` config, no test files). *Not available.*
-- **Coverage**: *not available*
+
+### Tests
+
+The repository now ships a full automated test suite on both sides.
+
+**Backend — pytest (`backend/tests/`)**
+
+Test dependencies are declared separately in `backend/requirements-dev.txt` so the production install of `requirements.txt` stays lean. The pytest configuration lives in `backend/pytest.ini` and registers a `slow` marker for the GEKKO-backed integration fits.
+
+```bash
+cd backend
+source .venv/bin/activate      # on Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+pytest                          # run all tests
+pytest -m "not slow"            # skip the GEKKO integration fits
+```
+
+What is covered:
+
+- `tests/test_fdc_fit.py` — pure helpers (`_sse`, `_rmse`, `_build_smooth_x`), per-model evaluation (`_eval_model`), the paper-defined slope (`_compute_slope_paper`), input validation (wrong length, NaN, Infinity, bad x-shape) and end-to-end `fit_all_models` calls against synthetic y-data drawn from each analytical model (asserts envelope shape, classification well-formedness, residual SSE).
+- `tests/test_main.py` — FastAPI `GET /api/v1/health`, Pydantic validation on `POST /api/v1/compute` (missing body, wrong length, non-numeric values, non-finite values), and a full success path asserting the complete JSON envelope.
+
+**Frontend — Vitest (`frontend/src/**/*.test.ts{,x}`)**
+
+Configured in `frontend/vitest.config.ts` with the `jsdom` environment, `@testing-library/jest-dom` matchers, and a shared setup file at `src/test/setup.ts` that runs React `cleanup()` between tests.
+
+```bash
+cd frontend
+npm test                 # run all tests once
+npm run test:watch       # watch mode for development
+npm run test:coverage    # write lcov + html coverage under coverage/
+```
+
+What is covered:
+
+- `src/lib/input.test.ts` — `validateViewingDistance` (all preset and custom-distance branches) and `parseYValues` (numeric, alphabetic, NaN, Infinity inputs).
+- `src/lib/chart.test.ts` — `mergeModelCurves` for null responses, full-length curves, and unequal curve lengths (safety truncation).
+- `src/lib/clinicalSummary.test.ts` — `deriveClinicalMeasurements` for empty input, fixation disparity at `x = 0`, nearest associated phoria, and -0 normalisation.
+- `src/lib/chartAnnotations.test.ts` — `getPatientLimitMarkers` across the four zero-pattern cases at `x ∈ {-15, -10}`.
+- `src/lib/chartHover.test.ts` — snap / interpolation / domain-bound logic plus hover-snapshot equality used by `CurveChart`.
+- `src/constants/fdc.test.ts` — axis domain constant, fixed x positions, model keys, and the 40 cm / 25 cm preset lookup via `getPresetValuesForFixedX`.
+- `src/api/fdc.test.ts` — `computeFits` request shape, JSON `detail` surfacing, raw-text fallback, and the empty-body HTTP status fallback, all exercised against a mocked `fetch`.
+- `src/components/MetricsTable.test.tsx` — empty placeholder, per-model rows with 3-decimal metric formatting, and the `metric-table__row--active` highlight for the best-by-SSE row.
+- `src/components/ClassificationCard.test.tsx` — placeholder state, selected-model label + slope, fixation disparity at `x = 0`, and the smallest-non-zero associated phoria readout.
+
+Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend tests** (Vitest).
 
 ---
 
 ## Deployment
 
 - No `Dockerfile`, no `docker-compose*.yml`, no Kubernetes manifests, no `.github/workflows/`, no `.gitlab-ci.yml`. Deployment tooling is **not included in this repository** — *needs manual confirmation* with the project maintainer.
-- For a minimal self-hosted deployment typically below is one way to do it :
+- For a minimal self-hosted deployment you would typically:
   1. Build the SPA: `npm run build` (output in `frontend/dist/`).
   2. Serve `frontend/dist/` from any static host / reverse proxy.
   3. Run `uvicorn app.main:app --host 0.0.0.0 --port 8000` behind the same reverse proxy, forwarding `/api/*` to it.
@@ -332,10 +396,10 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -
 
 ## Project status / what is not in the repo
 
-The following are **not** present and are noted here so they are not assumed:
+The repository is focused on Phase 1 (see `docs/README.md`). The following are **not** present and are noted here so they are not assumed:
 
 - No `.env` / `.env.example` / any runtime configuration via environment variables.
-- No automated tests, coverage tooling, or CI workflows.
+- No CI workflow. Tests run locally via `pytest` (backend) and `vitest run` (frontend); no `.github/workflows/` is present.
 - No Docker/container configuration.
 - No authentication, authorization, persistence, or per-patient storage — every request is stateless.
 - No explicit Python version pin in `backend/requirements.txt`.
