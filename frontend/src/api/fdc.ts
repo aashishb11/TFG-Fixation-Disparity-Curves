@@ -4,6 +4,21 @@ type ErrorResponse = {
   detail?: string;
 };
 
+function getApiBaseUrl(): string {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  if (!configuredBaseUrl) {
+    return "";
+  }
+
+  return configuredBaseUrl.replace(/\/+$/, "");
+}
+
+function buildApiUrl(path: string): string {
+  const baseUrl = getApiBaseUrl();
+  return baseUrl ? `${baseUrl}${path}` : path;
+}
+
 /**
  * Calls the backend `/api/v1/compute` endpoint with the seven measured
  * fixation-disparity y-values and returns the full fitting result.
@@ -14,7 +29,7 @@ type ErrorResponse = {
  * instead of a generic "HTTP 422" message.
  */
 export async function computeFits(yValues: number[]): Promise<ComputeResponse> {
-  const response = await fetch("/api/v1/compute", {
+  const response = await fetch(buildApiUrl("/api/v1/compute"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ y: yValues }),

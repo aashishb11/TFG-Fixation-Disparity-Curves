@@ -7,12 +7,28 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import app, get_allowed_origins
 
 
 @pytest.fixture(scope="module")
 def client() -> TestClient:
     return TestClient(app)
+
+
+class TestAllowedOrigins:
+    def test_defaults_to_local_vite_origin(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("ALLOWED_ORIGINS", raising=False)
+        assert get_allowed_origins() == ["http://localhost:5173"]
+
+    def test_splits_comma_separated_origins(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv(
+            "ALLOWED_ORIGINS",
+            "https://fdc.example.com, https://www.fdc.example.com",
+        )
+        assert get_allowed_origins() == [
+            "https://fdc.example.com",
+            "https://www.fdc.example.com",
+        ]
 
 
 class TestHealthEndpoint:

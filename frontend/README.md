@@ -170,7 +170,19 @@ npm install
 
 ### Environment variables
 
-**No environment variables are defined or consumed in the repository.** The backend origin is hardcoded to `http://localhost:5173` (CORS) in `backend/app/main.py`, and the frontend dev proxy is hardcoded to `http://localhost:8000` in `frontend/vite.config.ts`. There is no `.env.example` to copy.
+The frontend supports one optional build-time environment variable:
+
+- `VITE_API_BASE_URL` â€” absolute backend origin for production builds, for example `https://fdc-backend.onrender.com`
+
+If `VITE_API_BASE_URL` is not set, the frontend falls back to same-origin requests such as `/api/v1/compute`, which is convenient in local development and reverse-proxy setups.
+
+Example production file:
+
+```bash
+cp .env.production.example .env.production
+```
+
+The backend CORS origin is configured separately via `ALLOWED_ORIGINS` in `backend/app/main.py`.
 
 ---
 
@@ -381,6 +393,21 @@ Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend t
 
   The steps above are not codified anywhere in the repo.
 
+### Render backend + cPanel frontend
+
+The repository now includes a root-level [`render.yaml`](../render.yaml) blueprint for deploying the FastAPI backend to Render from the `backend/` directory.
+
+Recommended production setup:
+
+1. Create a Render web service from this repository.
+2. Let Render read [`render.yaml`](../render.yaml).
+3. Set `ALLOWED_ORIGINS` on Render to your UPC frontend origin, for example `https://your-domain.example`.
+4. In `frontend/.env.production`, set `VITE_API_BASE_URL=https://your-render-service.onrender.com`.
+5. Run `npm run build`.
+6. Upload the resulting `frontend/dist/` contents to UPC cPanel.
+
+This keeps the static SPA on UPC hosting while the Python API runs on Render.
+
 ---
 
 ## Troubleshooting
@@ -398,7 +425,7 @@ Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend t
 
 The repository is focused on Phase 1 (see `docs/README.md`). The following are **not** present and are noted here so they are not assumed:
 
-- No `.env` / `.env.example` / any runtime configuration via environment variables.
+- No runtime-only environment configuration is required locally, but production builds may use `VITE_API_BASE_URL` and production backend deployments may use `ALLOWED_ORIGINS`.
 - No CI workflow. Tests run locally via `pytest` (backend) and `vitest run` (frontend); no `.github/workflows/` is present.
 - No Docker/container configuration.
 - No authentication, authorization, persistence, or per-patient storage — every request is stateless.

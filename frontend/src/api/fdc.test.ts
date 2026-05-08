@@ -25,6 +25,7 @@ describe("computeFits", () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -48,6 +49,24 @@ describe("computeFits", () => {
     expect(init?.method).toBe("POST");
     expect(init?.headers).toEqual({ "Content-Type": "application/json" });
     expect(init?.body).toBe(JSON.stringify({ y: [1, 2, 3, 4, 5, 6, 7] }));
+  });
+
+  it("uses VITE_API_BASE_URL when configured for production hosting", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "https://fdc-backend.onrender.com/");
+
+    const payload = {
+      x: [],
+      measured: [],
+      models: {},
+      classification: { best_by_sse: "T1", best_by_rmse: "T1" },
+    };
+    const mock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    mock.mockResolvedValueOnce(mockFetchResponse(JSON.stringify(payload)));
+
+    await computeFits([1, 2, 3, 4, 5, 6, 7]);
+
+    const [url] = mock.mock.calls[0] as FetchArgs;
+    expect(url).toBe("https://fdc-backend.onrender.com/api/v1/compute");
   });
 
   it("surfaces the backend `detail` message from JSON error bodies", async () => {
