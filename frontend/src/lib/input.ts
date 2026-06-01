@@ -13,32 +13,18 @@ type ViewingDistanceValidationResult =
   | { ok: true }
   | {
       ok: false;
-      field: "viewingDistance" | "customDistance";
+      field: "viewingDistance";
       message: string;
     };
 
-/**
- * Validates that a viewing distance has been selected and, when "other" is
- * chosen, that the custom distance field is non-empty. Returns the failing
- * field name so the UI can focus or highlight the right input.
- */
 export function validateViewingDistance(
   viewingDistance: ViewingDistance | "",
-  customDistance: string,
 ): ViewingDistanceValidationResult {
   if (!viewingDistance) {
     return {
       ok: false,
       field: "viewingDistance",
       message: "Required before running the statistical fit.",
-    };
-  }
-
-  if (viewingDistance === "other" && customDistance.trim() === "") {
-    return {
-      ok: false,
-      field: "customDistance",
-      message: "Please type your preferred distance",
     };
   }
 

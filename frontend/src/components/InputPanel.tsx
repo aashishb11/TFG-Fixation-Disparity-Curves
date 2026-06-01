@@ -1,56 +1,30 @@
-import { VIEWING_DISTANCE_LABELS, VIEWING_DISTANCE_OPTIONS } from "../constants/fdc";
+import { VIEWING_DISTANCE_OPTIONS } from "../constants/fdc";
 import type { ViewingDistance } from "../types/fdc";
 
 type InputPanelProps = {
-  customDistance: string;
-  customDistanceTouched: boolean;
   error: string | null;
   loading: boolean;
   selectedDistance: ViewingDistance | "";
   xValues: readonly number[];
   yValues: string[];
   onChange: (index: number, value: string) => void;
-  onCustomDistanceBlur: () => void;
-  onCustomDistanceChange: (value: string) => void;
   onDistanceChange: (value: ViewingDistance | "") => void;
   onSubmit: () => void;
 };
 
 export function InputPanel({
-  customDistance,
-  customDistanceTouched,
   error,
   loading,
   selectedDistance,
   xValues,
   yValues,
   onChange,
-  onCustomDistanceBlur,
-  onCustomDistanceChange,
   onDistanceChange,
   onSubmit,
 }: InputPanelProps) {
-  const isManualMode = selectedDistance === "other";
-  const hasCustomDistance = customDistance.trim() !== "";
-  const showCustomDistanceError = isManualMode && !hasCustomDistance && customDistanceTouched;
   const distanceValidationMessage = !selectedDistance
     ? "Required before running the statistical fit."
     : null;
-  const customDistanceMessage = !hasCustomDistance
-    ? "Please type your preferred distance"
-    : "Custom distance entered.";
-
-  const measurementGuidance = !selectedDistance
-    ? "Select a viewing distance to apply a clinical preset or switch to manual entry."
-    : isManualMode
-      ? "Manual entry mode is active. Enter or edit the seven custom measurements directly."
-      : `The ${VIEWING_DISTANCE_LABELS[selectedDistance]} clinical preset values were applied automatically. You can adjust any field if needed.`;
-
-  const measurementStatus = !selectedDistance
-    ? "Awaiting distance"
-    : isManualMode
-      ? "Manual entry"
-      : "Preset applied";
 
   return (
     <aside className="sidebar">
@@ -88,38 +62,6 @@ export function InputPanel({
               {distanceValidationMessage}
             </p>
           ) : null}
-
-          {isManualMode ? (
-            <div className="custom-distance">
-              <label className="form-label" htmlFor="custom-viewing-distance">
-                Preferred Distance
-              </label>
-              <div className="custom-distance__control">
-                <input
-                  id="custom-viewing-distance"
-                  className="input-grid__field custom-distance__input"
-                  inputMode="decimal"
-                  min="0"
-                  onBlur={onCustomDistanceBlur}
-                  onChange={(event) => onCustomDistanceChange(event.target.value)}
-                  placeholder="e.g. 30"
-                  step="any"
-                  type="number"
-                  value={customDistance}
-                />
-                <span className="custom-distance__unit">cm</span>
-              </div>
-              <p
-                className={
-                  showCustomDistanceError
-                    ? "field-feedback field-feedback--error"
-                    : "field-feedback field-feedback--info"
-                }
-              >
-                {customDistanceMessage}
-              </p>
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -127,18 +69,11 @@ export function InputPanel({
         <div className="measurement-panel__header">
           <div className="measurement-panel__title-row">
             <h3 className="group-title">Measured Fixation Disparity Values</h3>
-            <span
-              className={
-                isManualMode
-                  ? "measurement-status measurement-status--manual"
-                  : "measurement-status"
-              }
-            >
-              {measurementStatus}
-            </span>
+            <span className="measurement-status">Editable values</span>
           </div>
           <p className="group-description measurement-panel__description">
-            {measurementGuidance}
+            Enter the measured fixation disparity values for each fixed x
+            position.
           </p>
         </div>
 
@@ -156,7 +91,7 @@ export function InputPanel({
                 id={`y-value-${index}`}
                 className="input-grid__field measurement-list__input"
                 onChange={(event) => onChange(index, event.target.value)}
-                placeholder={isManualMode ? "Enter custom value" : "Preset value"}
+                placeholder="0"
                 step="any"
                 type="number"
                 value={yValues[index]}

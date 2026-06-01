@@ -41,6 +41,7 @@ import type { HoverSnapshot, MergedCurvePoint, ModelKey, Point } from "../types/
 
 type CurveChartProps = {
   bestModel: ModelKey | null;
+  compatibleModels: ModelKey[];
   canExport: boolean;
   chartRef: RefObject<HTMLDivElement | null>;
   data: MergedCurvePoint[];
@@ -155,19 +156,33 @@ function ensureHoverSnapshotUpdate(
   return nextSnapshot;
 }
 
-function getChartLineOpacity(bestModel: ModelKey | null, modelKey: ModelKey): number {
-  if (bestModel === null) {
-    return 0.94;
+function getChartLineOpacity(
+  compatibleModels: ModelKey[],
+  bestModel: ModelKey | null,
+  modelKey: ModelKey,
+): number {
+  if (bestModel === null) return 0.94;
+  if (compatibleModels.length > 0) {
+    if (modelKey === bestModel) return 1;
+    if (compatibleModels.includes(modelKey)) return 0.85;
+    return 0.35;
   }
-
+  // analysis done but no models under threshold: fall back to SSE-only emphasis
   return modelKey === bestModel ? 1 : 0.58;
 }
 
-function getChartLineWidth(bestModel: ModelKey | null, modelKey: ModelKey): number {
-  if (bestModel === null) {
-    return 3.4;
+function getChartLineWidth(
+  compatibleModels: ModelKey[],
+  bestModel: ModelKey | null,
+  modelKey: ModelKey,
+): number {
+  if (bestModel === null) return 3.4;
+  if (compatibleModels.length > 0) {
+    if (modelKey === bestModel) return 4.6;
+    if (compatibleModels.includes(modelKey)) return 3.8;
+    return 2.2;
   }
-
+  // analysis done but no models under threshold: fall back to SSE-only emphasis
   return modelKey === bestModel ? 4.6 : 2.85;
 }
 
@@ -175,7 +190,7 @@ function shouldRenderBestModelHalo(bestModel: ModelKey | null): bestModel is Mod
   return bestModel !== null;
 }
 
-function getLegendItems(bestModel: ModelKey | null) {
+function getLegendItems(bestModel: ModelKey | null, compatibleModels: ModelKey[]) {
   return [
     {
       color: MEASURED_DATA_COLOR,
@@ -187,7 +202,10 @@ function getLegendItems(bestModel: ModelKey | null) {
       color: MODEL_COLORS[modelKey],
       key: modelKey,
       label: MODEL_CHART_LABELS[modelKey],
-      selected: bestModel === modelKey,
+      selected:
+        compatibleModels.length > 0
+          ? compatibleModels.includes(modelKey)
+          : modelKey === bestModel,
     })),
   ];
 }
@@ -239,8 +257,11 @@ function isHoverActive(snapshot: HoverSnapshot | null): snapshot is HoverSnapsho
   return snapshot !== null;
 }
 
-function useStableLegendItems(bestModel: ModelKey | null) {
-  return useMemo(() => getLegendItems(bestModel), [bestModel]);
+function useStableLegendItems(bestModel: ModelKey | null, compatibleModels: ModelKey[]) {
+  return useMemo(
+    () => getLegendItems(bestModel, compatibleModels),
+    [bestModel, compatibleModels],
+  );
 }
 
 function useStablePatientLimitMarkers(measured: Point[]) {
@@ -408,6 +429,7 @@ function CentralXAxisTickMarker({ tick }: { tick: number }) {
 
 export const CurveChart = memo(function CurveChart({
   bestModel,
+  compatibleModels,
   canExport,
   chartRef,
   data,
@@ -421,20 +443,20 @@ export const CurveChart = memo(function CurveChart({
   const glowFilterId = useId().replace(/:/g, "");
 
   const patientLimitMarkers = useStablePatientLimitMarkers(measured);
-  const legendItems = useStableLegendItems(bestModel);
+  const legendItems = useStableLegendItems(bestModel, compatibleModels);
 
   useEffect(() => {
     onHoverSnapshotChange?.(hoverSnapshot);
   }, [hoverSnapshot, onHoverSnapshotChange]);
 
   const getCurveOpacity = useCallback(
-    (modelKey: ModelKey): number => getChartLineOpacity(bestModel, modelKey),
-    [bestModel],
+    (modelKey: ModelKey): number => getChartLineOpacity(compatibleModels, bestModel, modelKey),
+    [compatibleModels, bestModel],
   );
 
   const getCurveWidth = useCallback(
-    (modelKey: ModelKey): number => getChartLineWidth(bestModel, modelKey),
-    [bestModel],
+    (modelKey: ModelKey): number => getChartLineWidth(compatibleModels, bestModel, modelKey),
+    [compatibleModels, bestModel],
   );
 
   return (
