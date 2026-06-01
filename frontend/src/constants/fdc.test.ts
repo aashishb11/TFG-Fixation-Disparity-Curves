@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   AXIS_DOMAIN,
+  DEFAULT_MEASURED_Y_VALUES,
   FIXED_X_VALUES,
   MODEL_KEYS,
-  getPresetValuesForFixedX,
+  VIEWING_DISTANCE_OPTIONS,
 } from "./fdc";
 
 describe("static chart constants", () => {
@@ -19,24 +20,18 @@ describe("static chart constants", () => {
   it("declares the four supported model types", () => {
     expect(MODEL_KEYS).toEqual(["T1", "T2", "T3", "T4"]);
   });
-});
 
-describe("getPresetValuesForFixedX", () => {
-  it("returns the 40 cm preset values at the seven fixed x positions", () => {
-    // Preset indices = FIXED_X / 5 + 6 over the 13-entry preset table.
-    expect(getPresetValuesForFixedX("40cm")).toEqual([
-      "12.9", "8.6", "4.3", "0", "-4.3", "-8.6", "-12.9",
+  it("exposes only the two supported viewing-distance options", () => {
+    expect(VIEWING_DISTANCE_OPTIONS).toEqual([
+      { value: "40cm", label: "40 cm" },
+      { value: "25cm", label: "25 cm" },
     ]);
   });
 
-  it("returns the 25 cm preset values at the seven fixed x positions", () => {
-    expect(getPresetValuesForFixedX("25cm")).toEqual([
-      "20.6", "13.7", "6.9", "0", "-6.9", "-13.7", "-20.6",
+  it("initializes the measured inputs with seven zero values", () => {
+    expect(DEFAULT_MEASURED_Y_VALUES).toEqual([
+      "0", "0", "0", "0", "0", "0", "0",
     ]);
-  });
-
-  it("returns a result of the same length as FIXED_X_VALUES", () => {
-    expect(getPresetValuesForFixedX("40cm")).toHaveLength(FIXED_X_VALUES.length);
-    expect(getPresetValuesForFixedX("25cm")).toHaveLength(FIXED_X_VALUES.length);
+    expect(DEFAULT_MEASURED_Y_VALUES).toHaveLength(FIXED_X_VALUES.length);
   });
 });

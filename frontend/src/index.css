@@ -16,7 +16,7 @@
   --shadow-soft: 0 12px 30px rgba(24, 50, 74, 0.05);
   --shadow-subtle: 0 10px 24px rgba(24, 50, 74, 0.045);
 
-  font-family: "Inter", "Segoe UI", sans-serif;
+  font-family: "Sora", system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: var(--color-text-primary);

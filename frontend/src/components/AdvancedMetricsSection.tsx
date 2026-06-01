@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { MetricsTable } from "./MetricsTable";
 import type { ComputeResponse } from "../types/fdc";
 
@@ -11,19 +11,15 @@ export function AdvancedMetricsSection({
 }: AdvancedMetricsSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const panelId = useId();
-
-  useEffect(() => {
-    if (result === null) {
-      setIsExpanded(false);
-    }
-  }, [result]);
+  const hasResult = result !== null;
+  const isPanelExpanded = hasResult && isExpanded;
 
   return (
     <article
       className={
-        isExpanded
-          ? "card card--advanced-metrics card--advanced-metrics-open"
-          : "card card--advanced-metrics"
+        isPanelExpanded
+          ? "card--advanced-metrics card--advanced-metrics-open"
+          : "card--advanced-metrics"
       }
     >
       <div className="advanced-metrics__header">
@@ -38,15 +34,16 @@ export function AdvancedMetricsSection({
         <button
           type="button"
           className="advanced-metrics__toggle"
-          aria-expanded={isExpanded}
+          aria-expanded={isPanelExpanded}
           aria-controls={panelId}
+          disabled={!hasResult}
           onClick={() => setIsExpanded((current) => !current)}
         >
-          {isExpanded ? "Hide details" : "Show details"}
+          {isPanelExpanded ? "Hide details" : "Show details"}
         </button>
       </div>
 
-      {isExpanded ? (
+      {isPanelExpanded ? (
         <div id={panelId} className="advanced-metrics__panel">
           <MetricsTable result={result} />
         </div>

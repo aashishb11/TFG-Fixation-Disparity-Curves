@@ -1,16 +1,17 @@
 import type { CSSProperties } from "react";
 import { MODEL_CHART_LABELS, MODEL_COLORS } from "../constants/fdc";
 import { deriveClinicalMeasurements } from "../lib/clinicalSummary";
-import type { ComputeResponse } from "../types/fdc";
+import type { CompatibleClassification, ComputeResponse } from "../types/fdc";
 
 type ClassificationCardProps = {
   result: ComputeResponse | null;
+  compatibleModels: CompatibleClassification[];
 };
 
-export function ClassificationCard({ result }: ClassificationCardProps) {
+export function ClassificationCard({ result, compatibleModels }: ClassificationCardProps) {
+  const selectedModelKey = result?.classification.best_by_sse ?? null;
   const selectedModel =
     result === null ? null : result.models[result.classification.best_by_sse];
-  const selectedModelKey = result?.classification.best_by_sse ?? null;
   const clinicalMeasurements = deriveClinicalMeasurements(result?.measured ?? []);
 
   const cardStyle = selectedModelKey
@@ -19,34 +20,49 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
 
   return (
     <article className="card card--classification" style={cardStyle}>
-      <div className="classification-card__grid">
-        <section className="classification-card__primary">
-          <h3 className="card__title">Classification</h3>
-          {result ? (
-            <>
-              <div className="classification-card__value">
-                <span
-                  style={
-                    selectedModelKey === null
-                      ? undefined
-                      : { color: MODEL_COLORS[selectedModelKey] }
-                  }
-                >
-                  {MODEL_CHART_LABELS[result.classification.best_by_sse]}
-                </span>
-              </div>
-              <span className="classification-card__note">
-                Selected as the primary clinical model based on Sum of Squared
-                Errors (SSE)
-              </span>
-            </>
-          ) : (
-            <div className="card__placeholder">
-              Run analysis to populate the clinical summary.
-            </div>
-          )}
-        </section>
+      <section className="classification-card__primary classification-card__primary--list">
+        <h3 className="card__title">Classification</h3>
+        {result ? (
+          <div className="classification-compat-list">
+            <span className="classification-compat-list__heading">
+              Compatible types — NRMSE &lt; 10%
+            </span>
+            {compatibleModels.length > 0 ? (
+              <ul className="classification-compat-list__items">
+                {compatibleModels.map(({ modelKey, errorPct, isBest }) => (
+                  <li key={modelKey} className="classification-compat-list__row">
+                    <span
+                      className="classification-compat-list__swatch"
+                      style={{ backgroundColor: MODEL_COLORS[modelKey] }}
+                    />
+                    <span className="classification-compat-list__name">
+                      {MODEL_CHART_LABELS[modelKey]}
+                    </span>
+                    <span className="classification-compat-list__error">
+                      {errorPct.toFixed(1)}%
+                    </span>
+                    {isBest ? (
+                      <span className="classification-compat-list__badge">
+                        best
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="classification-compat-list__empty">
+                No curve type has fitting error below 10%.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="card__placeholder">
+            Run analysis to populate the clinical summary.
+          </div>
+        )}
+      </section>
 
+      <div className="classification-card__stats">
         <section className="classification-card__slope">
           <span className="classification-card__stat-label">Slope</span>
           <strong className="classification-card__stat-value">
