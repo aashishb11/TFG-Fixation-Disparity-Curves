@@ -1,11 +1,10 @@
 """
-FastAPI application entry point for the Fixation Disparity Curve fitting API.
+FastAPI entry point for the Fixation Disparity Curve API.
 
-Routes
-------
-GET  /api/v1/health   — liveness probe, returns {"status": "ok"}
-POST /api/v1/compute  — accepts 7 measured y-values, returns curve fits for
-                        all four polynomial models plus a best-fit classification
+Routes:
+  GET  /api/v1/health   - simple health check, returns {"status": "ok"}
+  POST /api/v1/compute  - receives 7 y-values, runs the curve fitting and
+                          returns results for all four models + classification
 """
 from __future__ import annotations
 
@@ -42,15 +41,14 @@ app.add_middleware(
 
 
 class ComputeRequest(BaseModel):
-    """Exactly 7 fixation-disparity y-values measured at the fixed x positions
-    [-15, -10, -5, 0, 5, 10, 15] (prism diopters -> arcmin)."""
+    """The 7 fixation-disparity y-values measured at x = [-15, -10, -5, 0, 5, 10, 15]."""
 
     y: conlist(float, min_length=7, max_length=7)
 
 
 @app.get("/api/v1/health")
 def health():
-    """Liveness probe — returns immediately with no backend computation."""
+    """Simple health check."""
     return {"status": "ok"}
 
 
@@ -58,12 +56,11 @@ def health():
 @limiter.limit("30/minute")
 def compute(request: Request, req: ComputeRequest):
     """
-    Fit all four FDC polynomial models to the supplied measurements and return
-    the fitted curves, error metrics, and best-fit classification.
+    Runs the curve fitting for all four models and returns results.
 
-    Raises HTTP 400 for invalid input (e.g. non-finite values).
-    Raises HTTP 429 when the caller exceeds 30 requests per minute.
-    Raises HTTP 500 for unexpected solver failures.
+    Returns 400 if the input is invalid (e.g. non-finite values).
+    Returns 429 if the caller exceeds 30 requests per minute.
+    Returns 500 if GEKKO fails for some unexpected reason.
     """
     try:
         return fit_all_models(req.y)

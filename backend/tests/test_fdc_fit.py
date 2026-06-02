@@ -1,15 +1,11 @@
-"""Unit tests for the numerical curve-fitting service.
+"""Tests for the curve fitting service.
 
-Covers:
-- input validation (shape and finiteness)
-- model evaluation and the paper-defined slope
-- per-model fit quality on synthetic data drawn from each analytical form
-- overall response envelope (keys, curve length, classification)
+Covers input validation, model evaluation, the slope calculation and
+end-to-end fits using synthetic data generated from each model type.
 
-The tests use synthetic y-values generated from each analytical model so that
-the optimiser has a unique, well-conditioned optimum and the SSE for the
-matching model is driven close to zero. This decouples the tests from GEKKO's
-solver tolerance and from any real clinical dataset.
+Using synthetic data means we know the expected result and can check
+that the SSE is close to zero for the matching model, without needing
+real clinical measurements.
 """
 from __future__ import annotations
 
@@ -29,7 +25,7 @@ from app.services.fdc_fit import (
 )
 
 
-# ─── Pure helpers ────────────────────────────────────────────────────────────
+# --- Helper functions ---
 
 class TestMetricHelpers:
     def test_sse_is_zero_for_identical_arrays(self) -> None:
@@ -39,7 +35,7 @@ class TestMetricHelpers:
     def test_sse_matches_manual_calculation(self) -> None:
         y_true = np.array([1.0, 2.0, 3.0])
         y_pred = np.array([1.5, 2.5, 2.5])
-        # (0.25 + 0.25 + 0.25) = 0.75
+        # 0.25 + 0.25 + 0.25 = 0.75
         assert _sse(y_true, y_pred) == pytest.approx(0.75)
 
     def test_rmse_is_sqrt_of_mean_squared_error(self) -> None:
@@ -58,7 +54,7 @@ class TestMetricHelpers:
         assert np.all(np.diff(xs) > 0)
 
 
-# ─── Model evaluation ────────────────────────────────────────────────────────
+# --- Model evaluation ---
 
 class TestEvalModel:
     @pytest.fixture
@@ -66,49 +62,49 @@ class TestEvalModel:
         return np.array([-3.0, 0.0, 3.0])
 
     def test_t1_cubic_is_correct(self, xs: np.ndarray) -> None:
-        # f(x) = 0 + 1 * (x - 0)^3 => [-27, 0, 27]
+        # f(x) = 0 + 1*(x-0)^3, so at x=-3,0,3 we get [-27, 0, 27]
         out = _eval_model("T1", xs, a=0.0, b=1.0, c=0.0, d=0.0)
         np.testing.assert_allclose(out, [-27.0, 0.0, 27.0])
 
     def test_t2_positive_exponential(self, xs: np.ndarray) -> None:
-        # f(x) = 0 + 1 * exp(-1 * (x - 0))
+        # f(x) = 0 + 1*exp(-1*(x-0))
         out = _eval_model("T2", xs, a=0.0, b=1.0, c=1.0, d=0.0)
         np.testing.assert_allclose(
             out, [math.exp(3), 1.0, math.exp(-3)], rtol=1e-12,
         )
 
     def test_t3_negative_exponential(self, xs: np.ndarray) -> None:
-        # f(x) = 0 - 1 * exp(1 * (x - 0))
+        # f(x) = 0 - 1*exp(1*(x-0))
         out = _eval_model("T3", xs, a=0.0, b=1.0, c=1.0, d=0.0)
         np.testing.assert_allclose(
             out, [-math.exp(-3), -1.0, -math.exp(3)], rtol=1e-12,
         )
 
     def test_t4_arctan_is_odd_about_d(self, xs: np.ndarray) -> None:
-        # f(x) = 0 - 1 * atan(1 * (x - 0)) — odd symmetry => f(-x) = -f(x).
+        # arctan is odd so f(-x) = -f(x) when a=0 and d=0
         out = _eval_model("T4", xs, a=0.0, b=1.0, c=1.0, d=0.0)
         assert out[0] == pytest.approx(-out[2])
         assert out[1] == pytest.approx(0.0)
 
 
-# ─── Slope ────────────────────────────────────────────────────────────────────
+# --- Slope ---
 
 class TestSlope:
     def test_t1_slope_matches_cubic_formula(self) -> None:
-        # f(x) = 0 + 1 * x^3 => slope = |27 - (-27)| / 6 = 9.0
+        # f(x) = 1*x^3, slope = |27-(-27)| / 6 = 9.0
         assert _compute_slope_paper("T1", 0.0, 1.0, 0.0, 0.0) == pytest.approx(9.0)
 
     def test_slope_is_non_negative(self) -> None:
-        # Varied parameter combinations should always yield |.| / 6 >= 0.
+        # slope uses absolute value so it should always be >= 0
         for model in ("T1", "T2", "T3", "T4"):
             assert _compute_slope_paper(model, 1.0, 2.0, 0.5, -1.0) >= 0
 
     def test_t4_slope_flat_parameters_is_zero(self) -> None:
-        # b = 0 makes T4 constant, so slope should be exactly zero.
+        # with b=0 T4 is a constant function so the slope is zero
         assert _compute_slope_paper("T4", 0.0, 0.0, 1.0, 0.0) == pytest.approx(0.0)
 
 
-# ─── Input validation ────────────────────────────────────────────────────────
+# --- Input validation ---
 
 class TestInputValidation:
     def test_rejects_wrong_length(self) -> None:
@@ -131,22 +127,21 @@ class TestInputValidation:
             fit_all_models(y, x=np.array([0.0, 1.0, 2.0]))
 
 
-# ─── End-to-end fits ─────────────────────────────────────────────────────────
+# --- End-to-end fits ---
 
 def _eval(model: str, xs: np.ndarray, a: float, b: float, c: float, d: float):
-    """Convenience wrapper used by the synthetic-data tests below."""
+    """Small wrapper to generate synthetic y-values for the tests below."""
     return _eval_model(model, xs, a, b, c, d).tolist()
 
 
 @pytest.mark.slow
 class TestFitAllModels:
-    """Integration tests that exercise the full four-model optimisation.
+    """Full integration tests - runs GEKKO for all 4 models so they take a bit longer.
 
-    Marked ``slow`` because each test builds and solves four GEKKO problems.
-    Synthetic y-values are drawn from a single ground-truth model so that its
-    residual SSE is close to zero; the classification should then select that
-    model. We assert on structural shape and classification, not on exact
-    fitted coefficients (GEKKO solutions depend on initial values and bounds).
+    Synthetic y-values are generated from a known model so we can verify
+    the SSE is close to zero for the matching model. We only check the
+    structure and classification, not exact parameter values since those
+    depends on solver tolerances and initial conditions.
     """
 
     def _assert_response_shape(self, result: dict) -> None:
@@ -164,17 +159,16 @@ class TestFitAllModels:
             assert isinstance(model["rmse"], float)
             assert isinstance(model["slope"], float)
             assert len(model["fitted_at_x"]) == 7
-            # Default smooth_n = 200.
+            # smooth_n defaults to 200
             assert len(model["curve"]) == 200
 
     def test_fits_cubic_data_and_returns_expected_envelope(self) -> None:
-        # Low-amplitude cubic keeps values in the plausible clinical range
-        # (no diverging cubic tails at x = ±15).
+        # low amplitude so the cubic doesn't blow up at the ends (x = +/-15)
         y = _eval("T1", DEFAULT_X, a=0.0, b=0.002, c=0.0, d=0.0)
         result = fit_all_models(y)
 
         self._assert_response_shape(result)
-        # Residual SSE for T1 should be near zero since y was generated by T1.
+        # SSE for T1 should be basically zero since the data came from T1
         assert result["models"]["T1"]["sse"] == pytest.approx(0.0, abs=1e-4)
 
     def test_smooth_n_controls_curve_resolution(self) -> None:
@@ -183,10 +177,8 @@ class TestFitAllModels:
         assert len(result["models"]["T1"]["curve"]) == 50
 
     def test_all_zeros_is_handled(self) -> None:
-        # All-zero input is an edge case. The response envelope must still be
-        # valid, and the best-fit SSE must be small (T1's cubic is unbounded
-        # at the origin, so it can match zero exactly; other models carry
-        # positive lower bounds on `b` and show small residuals).
+        # all zeros is an edge case but the result should still be valid
+        # T1 can match it exactly since there's no lower bound on b for cubic
         result = fit_all_models([0.0] * 7)
         self._assert_response_shape(result)
 

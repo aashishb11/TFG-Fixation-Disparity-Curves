@@ -1,22 +1,19 @@
 """
-Fixation Disparity Curve fitting service.
+Curve fitting logic for the Fixation Disparity Curves application.
 
-Fits the four polynomial models described in the reference paper to a set of
-seven measured fixation-disparity (y) values at the fixed vergence-demand (x)
-positions [-15, -10, -5, 0, 5, 10, 15] prism diopters.
+Takes 7 measured y-values (fixation disparity in arcmin) at the fixed
+vergence positions [-15, -10, -5, 0, 5, 10, 15] prism diopters and fits
+four different models from the reference paper. Best one is chosen by
+minimum SSE.
 
-Model formulae
---------------
-T1  f(x) = a + b·(x − c)³                        (cubic / sigmoidal)
-T2  f(x) = a + b·exp(−c·(x − d))                 (positive exponential)
-T3  f(x) = a − b·exp( c·(x − d))                 (negative exponential)
-T4  f(x) = a − b·arctan(c·(x − d))               (arctangent / sigmoid)
+Model equations:
+  T1  y = a + b*(x-c)^3
+  T2  y = a + b*exp(-c*(x-d))
+  T3  y = a - b*exp(c*(x-d))
+  T4  y = a - b*arctan(c*(x-d))
 
-Optimisation is performed via GEKKO (nonlinear programming, IMODE=3 steady-state
-least-squares). The best model is chosen by minimum SSE; RMSE is reported
-alongside for interpretability.
-
-NOTE: DEFAULT_X must match FIXED_X_VALUES in frontend/src/constants/fdc.ts.
+Optimization is done with GEKKO (IMODE=3 steady-state).
+NOTE: DEFAULT_X has to match FIXED_X_VALUES in frontend/src/constants/fdc.ts.
 """
 from __future__ import annotations
 
@@ -28,13 +25,13 @@ from gekko import GEKKO
 
 ModelType = Literal["T1", "T2", "T3", "T4"]
 
-# Fixed vergence-demand positions shared with the frontend constant FIXED_X_VALUES.
+# Vergence positions, shared with the frontend constant FIXED_X_VALUES.
 DEFAULT_X = np.array([-15, -10, -5, 0, 5, 10, 15], dtype=float)
 
 
 @dataclass
 class FitResult:
-    """Holds the optimised parameters and derived metrics for a single model."""
+    """Stores fitted params and error metrics for a single model."""
 
     model: ModelType
     params: Dict[str, float]
@@ -45,33 +42,32 @@ class FitResult:
     fitted_at_x: List[float]             # model values at the 7 input x positions
 
 
-# ─── Error metrics ────────────────────────────────────────────────────────────
+# --- Error metrics ---
 
 def _sse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Sum of Squared Errors between measured and predicted values."""
+    """Sum of squared errors."""
     return float(np.sum((y_true - y_pred) ** 2))
 
 
 def _rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Root Mean Square Error — SSE normalised to the scale of the data."""
+    """Root mean squared error between the measured and predicted values."""
     return float(np.sqrt(_sse(y_true, y_pred) / len(y_true)))
 
 
 def _fit_error(m: GEKKO, y_pred: List[Any], y_true: np.ndarray):
     """
-    Builds the GEKKO SSE intermediate variable used as the objective.
-    SSE is monotonic with RMSE for a fixed dataset length, so minimising
-    either yields the same optimal parameters.
+    SSE as GEKKO intermediate variable, used as the objective for optimization.
+    For a fixed dataset length minimizing SSE gives the same result as minimizing RMSE.
     """
     return m.Intermediate(
         sum((y_pred[i] - float(y_true[i])) ** 2 for i in range(len(y_true)))
     )
 
 
-# ─── Curve evaluation ────────────────────────────────────────────────────────
+# --- Curve evaluation ---
 
 def _build_smooth_x(x: np.ndarray, n: int = 200) -> np.ndarray:
-    """Returns `n` evenly-spaced x values spanning the input domain."""
+    """Returns n evenly spaced x values over the input range, used for plotting smooth curve."""
     return np.linspace(float(np.min(x)), float(np.max(x)), n)
 
 
@@ -83,7 +79,7 @@ def _eval_model(
     c: float,
     d: float,
 ) -> np.ndarray:
-    """Evaluate a fitted model at the given x positions using numpy ufuncs."""
+    """Evaluates the given model at positions x using the fitted parameters."""
     if model == "T1":
         return a + b * (x - c) ** 3
     if model == "T2":
@@ -98,28 +94,26 @@ def _compute_slope_paper(
     model: ModelType, a: float, b: float, c: float, d: float
 ) -> float:
     """
-    Paper-defined slope descriptor: |f(3) − f(−3)| / 6.
+    Slope descriptor as defined in paper: |f(3) - f(-3)| / 6.
 
-    Evaluating at ±3 prism diopters (symmetric about zero) and dividing by
-    the interval width gives a robust estimate of the curve's central slope
-    that is consistent across all four model shapes.
+    Evaluating at +/-3 prism diopters and dividing by the interval gives
+    a consistent estimate of the central slope across all four model types.
     """
     fL = float(_eval_model(model, np.array([-3.0]), a, b, c, d)[0])
     fR = float(_eval_model(model, np.array([ 3.0]), a, b, c, d)[0])
     return abs(fR - fL) / 6.0
 
 
-# ─── Single-model optimisation ────────────────────────────────────────────────
+# --- Single model optimisation ---
 
 def _fit_single_model(
     model: ModelType, X: np.ndarray, Y: np.ndarray, smooth_n: int
 ) -> FitResult:
     """
-    Optimise one FDC model to the supplied (X, Y) data via GEKKO.
+    Fits one FDC model to the (X, Y) data using GEKKO.
 
-    Each model has domain-specific constraints (see inline comments) derived
-    from the reference paper to keep the fitted curve clinically plausible and
-    the optimisation well-conditioned.
+    Each model has constraints to keep the solution clinically plausible,
+    values are bounded based on what the reference paper recommends.
     """
     m = GEKKO(remote=False)
 
@@ -129,8 +123,7 @@ def _fit_single_model(
     d = m.Var(0)
 
     if model == "T1":
-        # Bound the centre of symmetry (a) and shift (c) to the plausible
-        # clinical range so the cubic doesn't diverge at the measurement ends.
+        # keep centre and shift bounded so the cubic doesn't blow up at x = +/-15
         a.lower, a.upper = -10, 10
         c.lower, c.upper = -10, 10
         y_pred = [a + b * (X[i] - c) ** 3 for i in range(len(X))]
@@ -139,14 +132,14 @@ def _fit_single_model(
         b.lower = 0.1   # amplitude must be positive
         c.lower = 0.1   # decay rate must be positive
         y_pred = [a + b * m.exp(-c * (X[i] - d)) for i in range(len(X))]
-        # Prevent the curve from dropping below -10 arcmin at the highest demand.
+        # curve shouldn't go below -10 arcmin at the highest vergence demand
         m.Equation(a + b * m.exp(-c * (X[-1] - d)) >= -10)
 
     elif model == "T3":
         b.lower = 0.1
         c.lower = 0.1
         y_pred = [a - b * m.exp(c * (X[i] - d)) for i in range(len(X))]
-        # Prevent the curve from exceeding 10 arcmin at the lowest demand.
+        # curve shouldn't exceed 10 arcmin at the lowest vergence demand
         m.Equation(a - b * m.exp(c * (X[0] - d)) <= 10)
 
     elif model == "T4":
@@ -154,9 +147,9 @@ def _fit_single_model(
         d.lower, d.upper = -10, 10
         b.lower = 0.1
         c.lower = 0.1
-        c.upper = 10    # prevent near-vertical arctan (effectively a step function)
+        c.upper = 10    # prevents near-vertical arctan, otherwise it looks like a step function
         y_pred = [a - b * m.atan(c * (X[i] - d)) for i in range(len(X))]
-        # Bound the curve at both ends of the measurement range.
+        # bound the curve at both ends of the measurement range
         m.Equation(a - b * m.atan(c * (X[0]  - d)) <= 10)
         m.Equation(a - b * m.atan(c * (X[-1] - d)) >= -10)
 
@@ -184,7 +177,7 @@ def _fit_single_model(
     Ys = _eval_model(model, Xs, a_v, b_v, c_v, d_v)
     curve_points = [{"x": float(xx), "y": float(yy)} for xx, yy in zip(Xs, Ys)]
 
-    # T1 uses three parameters (no d); all others use four.
+    # T1 only uses 3 params (no d), the rest use 4
     params = (
         {"a": a_v, "b": b_v, "c": c_v}
         if model == "T1"
@@ -202,7 +195,7 @@ def _fit_single_model(
     )
 
 
-# ─── Public entry point ───────────────────────────────────────────────────────
+# --- Public entry point ---
 
 def fit_all_models(
     y: List[float],
@@ -210,19 +203,16 @@ def fit_all_models(
     smooth_n: int = 200,
 ) -> Dict[str, Any]:
     """
-    Fit all four FDC models to the provided measurements and return a
-    JSON-serialisable result dict consumed by the frontend.
+    Runs the fitting for all 4 models and returns a dict the frontend can use directly.
 
     Parameters
     ----------
-    y       : seven measured fixation-disparity values (arcmin)
-    x       : corresponding vergence-demand positions (prism diopters);
+    y       : 7 fixation-disparity measurements in arcmin
+    x       : vergence positions in prism diopters,
               defaults to DEFAULT_X = [-15, -10, -5, 0, 5, 10, 15]
-    smooth_n: number of points in the smooth plotting curve (default 200)
+    smooth_n: number of points for the smooth plotting curve (default 200)
 
-    Returns
-    -------
-    A dict matching the ComputeResponse TypeScript type in the frontend:
+    The returned dict matches the ComputeResponse type in frontend:
     { x, measured, models: {T1, T2, T3, T4}, classification }
     """
     y_np = np.array(y, dtype=float)
