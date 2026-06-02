@@ -168,7 +168,10 @@ npm install
 
 ### Environment variables
 
-**No environment variables are defined or consumed in the repository.** The backend origin is hardcoded to `http://localhost:5173` (CORS) in `backend/app/main.py`, and the frontend dev proxy is hardcoded to `http://localhost:8000` in `frontend/vite.config.ts`. There is no `.env.example` to copy.
+| Variable | Side | Default | Purpose |
+|---|---|---|---|
+| `ALLOWED_ORIGINS` | backend | `http://localhost:5173,https://fixationdisparitycurves.upc.edu` | Comma-separated list of origins allowed by the CORS middleware. Set in the hosting platform (e.g. Render env vars). |
+| `VITE_API_BASE_URL` | frontend (build-time) | `""` (relative) | Absolute URL of the backend service. Must be set before running `npm run build` for production. Example: `https://your-backend.onrender.com`. Leave empty for local dev (the Vite proxy handles `/api` → `localhost:8000`). |
 
 ---
 
@@ -289,7 +292,10 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -
 
 **Errors**
 - `400 Bad Request` — raised for validation failures from `fit_all_models` (wrong number of values, non-finite values). The body is `{ "detail": "..." }`.
+- `429 Too Many Requests` — rate limit exceeded. The endpoint is capped at **30 requests per minute per IP**. This is enough for any real clinical session and blocks scripted abuse. Implemented via `slowapi` (in-memory, no external store required).
 - `500 Internal Server Error` — any other exception bubbled up from GEKKO/NumPy is wrapped as `{ "detail": "Computation failed: ..." }`.
+
+> **Execution model:** every call triggers **immediate synchronous computation** — numpy/gekko runs inline in the HTTP request. There is no queue, no background task, no cron scheduler. Each request is independent and stateless.
 
 ---
 
@@ -370,14 +376,43 @@ Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend t
 
 ## Deployment
 
-- No `Dockerfile`, no `docker-compose*.yml`, no Kubernetes manifests, no `.github/workflows/`, no `.gitlab-ci.yml`. Deployment tooling is **not included in this repository** — *needs manual confirmation* with the project maintainer.
-- For a minimal self-hosted deployment you would typically:
-  1. Build the SPA: `npm run build` (output in `frontend/dist/`).
-  2. Serve `frontend/dist/` from any static host / reverse proxy.
-  3. Run `uvicorn app.main:app --host 0.0.0.0 --port 8000` behind the same reverse proxy, forwarding `/api/*` to it.
-  4. Update `allow_origins` in `backend/app/main.py` to include the real frontend origin.
+### Current setup
 
-  The steps above are not codified anywhere in the repo.
+| Side | Host | URL |
+|---|---|---|
+| Frontend | cPanel (UPC) | <https://fixationdisparitycurves.upc.edu/> |
+| Backend | Render (free tier) | `https://tfg-fixation-disparity-curves-uee8.onrender.com` |
+
+The repository includes a `render.yaml` at the root that configures the Render web service automatically:
+- **Root directory**: `backend/`
+- **Build command**: `pip install -r requirements.txt`
+- **Start command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+> **Free tier limitation:** Render's free plan spins down services after 15 minutes of inactivity. The first request after a cold start can take ~30 seconds. Upgrading to the Starter plan ($7/month) eliminates this.
+
+### Deploying the frontend
+
+```bash
+# 1. Set the backend URL (no trailing slash, no spaces)
+echo "VITE_API_BASE_URL=https://your-backend.onrender.com" > frontend/.env.production
+
+# 2. Build
+cd frontend && npm run build
+
+# 3. Upload frontend/dist/ contents to cPanel public_html (replacing existing files)
+```
+
+### Self-hosted alternative (e.g. UPC server)
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Set ALLOWED_ORIGINS to your frontend domain
+export ALLOWED_ORIGINS=https://fixationdisparitycurves.upc.edu
+```
 
 ---
 
@@ -396,9 +431,8 @@ Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend t
 
 The repository is focused on Phase 1 (see `docs/README.md`). The following are **not** present and are noted here so they are not assumed:
 
-- No `.env` / `.env.example` / any runtime configuration via environment variables.
 - No CI workflow. Tests run locally via `pytest` (backend) and `vitest run` (frontend); no `.github/workflows/` is present.
-- No Docker/container configuration.
+- No Docker/container configuration (a `render.yaml` for Render is present).
 - No authentication, authorization, persistence, or per-patient storage — every request is stateless.
 - No explicit Python version pin in `backend/requirements.txt`.
 - `docs/model-and-errors.md` is currently empty.
