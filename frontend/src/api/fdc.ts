@@ -14,7 +14,8 @@ type ErrorResponse = {
  * instead of a generic "HTTP 422" message.
  */
 export async function computeFits(yValues: number[]): Promise<ComputeResponse> {
-  const response = await fetch("/api/v1/compute", {
+  const base = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+  const response = await fetch(`${base}/api/v1/compute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ y: yValues }),

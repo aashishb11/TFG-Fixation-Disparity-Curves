@@ -9,6 +9,8 @@ POST /api/v1/compute  — accepts 7 measured y-values, returns curve fits for
 """
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, conlist
@@ -17,11 +19,15 @@ from app.services.fdc_fit import fit_all_models
 
 app = FastAPI(title="TFG Fixation Disparity API", version="0.1.0")
 
-# Allow requests from the Vite dev server (http://localhost:5173).
-# In production this list should be replaced with the real origin.
+_raw_origins = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,https://fixationdisparitycurves.upc.edu",
+)
+_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
