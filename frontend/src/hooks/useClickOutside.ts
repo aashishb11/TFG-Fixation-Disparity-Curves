@@ -13,9 +13,12 @@ export function useClickOutside(
   onClose: () => void,
   active: boolean,
 ): void {
-  // Ref keeps `onClose` stable across renders without needing it as a dep.
+  // Ref keeps `onClose` stable for event handlers without resubscribing.
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!active) {

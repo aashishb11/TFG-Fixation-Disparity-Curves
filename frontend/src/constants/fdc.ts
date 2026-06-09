@@ -1,8 +1,4 @@
-import type {
-  ModelKey,
-  PresetViewingDistance,
-  ViewingDistance,
-} from "../types/fdc";
+import type { ModelKey, ViewingDistance } from "../types/fdc";
 
 // ─── Chart axis ───────────────────────────────────────────────────────────────
 
@@ -20,6 +16,12 @@ export const AXIS_TICKS = [-20, -15, -10, -5, 0, 5, 10, 15, 20] as const;
  */
 export const FIXED_X_VALUES = [-15, -10, -5, 0, 5, 10, 15] as const;
 
+/** Default measured fixation-disparity values shown on initial load. */
+export const DEFAULT_MEASURED_Y_VALUES = Array.from(
+  { length: FIXED_X_VALUES.length },
+  () => "",
+);
+
 // ─── Viewing distance UI ──────────────────────────────────────────────────────
 
 export const VIEWING_DISTANCE_OPTIONS: ReadonlyArray<{
@@ -28,60 +30,7 @@ export const VIEWING_DISTANCE_OPTIONS: ReadonlyArray<{
 }> = [
   { value: "40cm", label: "40 cm" },
   { value: "25cm", label: "25 cm" },
-  { value: "other", label: "Other" },
 ];
-
-export const VIEWING_DISTANCE_LABELS: Record<ViewingDistance, string> = {
-  "40cm": "40 cm",
-  "25cm": "25 cm",
-  other: "Other",
-};
-
-// ─── Clinical presets ─────────────────────────────────────────────────────────
-
-/**
- * Thirteen evenly-spaced fixation-disparity values for each preset distance,
- * spanning x = -30 to +30 in steps of 5. Index 6 corresponds to x = 0
- * (the midpoint / no-demand position).
- */
-const VIEWING_DISTANCE_PRESETS: Record<
-  PresetViewingDistance,
-  readonly string[]
-> = {
-  "40cm": [
-    "-34.4", "25.8", "17.2", "12.9", "8.6", "4.3", "0",
-    "-4.3", "-8.6", "-12.9", "-17.2", "-25.8", "-34.4",
-  ],
-  "25cm": [
-    "55", "41.2", "27.5", "20.6", "13.7", "6.9", "0",
-    "-6.9", "-13.7", "-20.6", "-27.5", "-41.2", "-55",
-  ],
-};
-
-// Internal mapping constants — not part of the public API.
-const PRESET_STEP = 5;
-const PRESET_CENTER_INDEX = 6; // index of x = 0 in the 13-value preset array
-
-/**
- * Returns the 7 preset y-values that correspond to FIXED_X_VALUES for the
- * given viewing distance. Throws if a mapping gap is ever introduced.
- */
-export function getPresetValuesForFixedX(
-  distance: PresetViewingDistance,
-): string[] {
-  const presetValues = VIEWING_DISTANCE_PRESETS[distance];
-
-  return FIXED_X_VALUES.map((xValue) => {
-    const presetIndex = xValue / PRESET_STEP + PRESET_CENTER_INDEX;
-    const presetValue = presetValues[presetIndex];
-
-    if (presetValue === undefined) {
-      throw new Error(`No preset value mapped for fixed x position ${xValue}.`);
-    }
-
-    return presetValue;
-  });
-}
 
 // ─── Model metadata ───────────────────────────────────────────────────────────
 

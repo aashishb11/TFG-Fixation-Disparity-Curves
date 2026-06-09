@@ -8,10 +8,7 @@ export type Point = {
 export type ModelKey = "T1" | "T2" | "T3" | "T4";
 
 /** Union of all valid viewing distances selectable in the UI. */
-export type ViewingDistance = "40cm" | "25cm" | "other";
-
-/** Subset of ViewingDistance values that have built-in clinical presets. */
-export type PresetViewingDistance = Exclude<ViewingDistance, "other">;
+export type ViewingDistance = "40cm" | "25cm";
 
 /**
  * Per-model output from the backend fitting service.
@@ -54,6 +51,16 @@ export type ComputeResponse = {
 export type MergedCurvePoint = {
   x: number;
 } & Record<ModelKey, number>;
+
+/**
+ * A single curve type whose NRMSE fitting error is below the compatible
+ * threshold. `errorPct` is NRMSE × 100 (see `getCompatibleClassifications`).
+ */
+export type CompatibleClassification = {
+  modelKey: ModelKey;
+  errorPct: number;
+  isBest: boolean;
+};
 
 /**
  * Snapshot of interpolated curve values at a given hover x position.

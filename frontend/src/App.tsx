@@ -7,10 +7,12 @@ import { ClinicalReportChart } from "./components/ClinicalReportChart";
 import { CurveChart } from "./components/CurveChart";
 import { HoverReadoutPanel } from "./components/HoverReadoutPanel";
 import type { HoverSnapshot } from "./types/fdc";
+import { PageFooter } from "./components/PageFooter";
 import { InputPanel } from "./components/InputPanel";
 import { PageHeader } from "./components/PageHeader";
 import { PdfExportDialog } from "./components/PdfExportDialog";
-import { FIXED_X_VALUES, getPresetValuesForFixedX } from "./constants/fdc";
+import { DEFAULT_MEASURED_Y_VALUES, FIXED_X_VALUES } from "./constants/fdc";
+import { getCompatibleClassifications } from "./lib/classification";
 import { mergeModelCurves } from "./lib/chart";
 import { exportSvgToPng, renderSvgToPngDataUrl } from "./lib/exportChart";
 import { parseYValues, validateViewingDistance } from "./lib/input";
@@ -19,11 +21,7 @@ import {
   exportClinicalReportPdf,
   type ReportSubjectDetails,
 } from "./lib/pdfReport";
-import type {
-  ComputeResponse,
-  PresetViewingDistance,
-  ViewingDistance,
-} from "./types/fdc";
+import type { ComputeResponse, ViewingDistance } from "./types/fdc";
 
 type ExportDialogStep = "choice" | "details" | null;
 
@@ -35,16 +33,12 @@ function waitForNextPaint(): Promise<void> {
 
 export default function App() {
   const computationVersionRef = useRef(0);
-  const emptyYValues = useMemo(
-    () => Array(FIXED_X_VALUES.length).fill(""),
-    [],
-  );
   const [viewingDistance, setViewingDistance] = useState<ViewingDistance | "">(
-    "",
+    "40cm",
   );
-  const [customDistance, setCustomDistance] = useState("");
-  const [customDistanceTouched, setCustomDistanceTouched] = useState(false);
-  const [yValues, setYValues] = useState<string[]>(() => emptyYValues);
+  const [yValues, setYValues] = useState<string[]>(() => [
+    ...DEFAULT_MEASURED_Y_VALUES,
+  ]);
   const [response, setResponse] = useState<ComputeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,6 +53,14 @@ export default function App() {
 
   const mergedCurve = useMemo(() => mergeModelCurves(response), [response]);
   const bestModel = response?.classification.best_by_sse ?? null;
+  const compatibleClassifications = useMemo(
+    () => (response !== null ? getCompatibleClassifications(response) : []),
+    [response],
+  );
+  const compatibleModelKeys = useMemo(
+    () => compatibleClassifications.map((c) => c.modelKey),
+    [compatibleClassifications],
+  );
 
   useEffect(() => {
     setHoverSnapshot(null);
@@ -88,41 +90,13 @@ export default function App() {
     resetComputedResults();
     setError(null);
     setViewingDistance(nextDistance);
-    setCustomDistanceTouched(false);
-
-    if (nextDistance === "40cm" || nextDistance === "25cm") {
-      setYValues(
-        getPresetValuesForFixedX(nextDistance as PresetViewingDistance),
-      );
-      return;
-    }
-
-    setYValues(emptyYValues);
-  };
-
-  const handleCustomDistanceChange = (value: string) => {
-    if (viewingDistance === "other") {
-      resetComputedResults();
-    }
-    setError(null);
-    setCustomDistance(value);
-  };
-
-  const handleCustomDistanceBlur = () => {
-    setCustomDistanceTouched(true);
   };
 
   const handleCompute = async () => {
     setError(null);
 
-    const viewingDistanceValidation = validateViewingDistance(
-      viewingDistance,
-      customDistance,
-    );
+    const viewingDistanceValidation = validateViewingDistance(viewingDistance);
     if (!viewingDistanceValidation.ok) {
-      if (viewingDistanceValidation.field === "customDistance") {
-        setCustomDistanceTouched(true);
-      }
       return;
     }
 
@@ -270,16 +244,12 @@ export default function App() {
       <div className="app-body">
         <div className="app-sidebar-column">
           <InputPanel
-            customDistance={customDistance}
-            customDistanceTouched={customDistanceTouched}
             error={error}
             loading={loading}
             selectedDistance={viewingDistance}
             xValues={FIXED_X_VALUES}
             yValues={yValues}
             onChange={handleInputChange}
-            onCustomDistanceBlur={handleCustomDistanceBlur}
-            onCustomDistanceChange={handleCustomDistanceChange}
             onDistanceChange={handleDistanceChange}
             onSubmit={handleCompute}
           />
@@ -298,6 +268,7 @@ export default function App() {
 
           <CurveChart
             bestModel={bestModel}
+            compatibleModels={compatibleModelKeys}
             canExport={Boolean(response)}
             chartRef={chartRef}
             data={mergedCurve}
@@ -308,6 +279,8 @@ export default function App() {
           />
         </main>
       </div>
+
+      <PageFooter />
 
       <PdfExportDialog
         details={reportSubjectDetails}

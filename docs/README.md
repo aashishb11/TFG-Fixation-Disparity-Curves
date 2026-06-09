@@ -1,6 +1,6 @@
 # Fixation Disparity Curve (FDC) Modeling — TFG
 
-An interactive web application for fitting, visualizing and classifying **Fixation Disparity Curves** from clinical measurements. Given 7 patient responses at fixed stimulus positions, the app fits four curve models (Type I–IV), reports per-model error metrics (SSE, RMSE) and a paper-defined slope, and selects the best-fitting curve type.
+Web application for fitting and visualizing **Fixation Disparity Curves** from clinical measurements. The user enters 7 measured values and the app fits four different curve models (Type I–IV), shows the error metrics (SSE, RMSE) for each one and picks the best fitting curve type.
 
 Reference paper (linked from `docs/`):
 <https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf>
@@ -28,18 +28,18 @@ Reference paper (linked from `docs/`):
 
 ## Overview
 
-Given 7 measured y-values at the fixed x positions `[-15, -10, -5, 0, 5, 10, 15]`, the backend fits four candidate models:
+The user provides 7 y-values measured at `[-15, -10, -5, 0, 5, 10, 15]` prism diopters. The backend fits four models from the reference paper:
 
-| Model | Equation (fitted by GEKKO) |
+| Model | Equation |
 |-------|-----------------------------|
 | T1    | `y = a + b · (x − c)^3`                    |
 | T2    | `y = a + b · exp(−c · (x − d))`            |
 | T3    | `y = a − b · exp(c · (x − d))`             |
 | T4    | `y = a − b · arctan(c · (x − d))`          |
 
-For every model it returns: fitted parameters, SSE, RMSE, slope defined as `|f(3) − f(−3)| / 6` (the paper's definition), a dense curve for plotting, and the values of the fit evaluated at the original x positions. A classification block reports `best_by_sse` and `best_by_rmse`.
+For each model the API returns: fitted parameters, SSE, RMSE, the slope defined as `|f(3) − f(−3)| / 6` (same as the paper), a smooth curve for plotting, and the fitted values at the 7 original x positions. The classification block says which model wins by SSE and by RMSE.
 
-The frontend renders the four fitted curves + the 7 measured points on a single chart (Recharts), shows a classification card (best fit, slope, fixation disparity at x=0, and the associated phoria — the smallest non-zero x where the best curve crosses y=0), and offers a high-resolution PNG export.
+The frontend shows all four curves plus the measured points in a Recharts chart, a card with the best model summary (slope, fixation disparity at x=0, associated phoria), and lets the user export the chart as PNG or generate a PDF clinical report.
 
 ---
 
@@ -133,12 +133,10 @@ TFG/
 
 ## Prerequisites
 
-- **Python**: not explicitly pinned in the repo (no `pyproject.toml` / runtime constraint in `requirements.txt`). The pinned dependency versions (e.g. `numpy==2.4.2`, `pydantic==2.12.5`) require a recent Python — **Python 3.11+** is recommended; *needs manual confirmation*.
-- **Node.js**: no explicit engines field in `frontend/package.json`. `@types/node ^24.x` and `vite ^7.3.1` imply **Node.js 20.19+ or 22.12+** (Vite 7's documented requirement); *needs manual confirmation for the exact minor version*.
-- **npm**: ships with Node. No lock file other than `package-lock.json` is present (no pnpm/yarn lock), so **npm** is the expected package manager.
-- **OS-level build tooling for GEKKO** may be required on some platforms. If `pip install gekko` fails, consult the GEKKO documentation; *not documented in this repository*.
-- **Database**: none. The app is stateless.
-- **External services**: none.
+- **Python 3.11+** recommended. The pinned dependencies like `numpy==2.4.2` and `pydantic==2.12.5` require a recent version.
+- **Node.js 20.19+ or 22.12+** — Vite 7 needs it. Use npm (no pnpm or yarn).
+- **GEKKO** installs a platform-specific solver binary via pip. On most platforms it works fine but if it fails check the GEKKO docs.
+- No database, no external services — the app is completely stateless.
 
 ---
 
@@ -168,7 +166,10 @@ npm install
 
 ### Environment variables
 
-**No environment variables are defined or consumed in the repository.** The backend origin is hardcoded to `http://localhost:5173` (CORS) in `backend/app/main.py`, and the frontend dev proxy is hardcoded to `http://localhost:8000` in `frontend/vite.config.ts`. There is no `.env.example` to copy.
+| Variable | Side | Default | Purpose |
+|---|---|---|---|
+| `ALLOWED_ORIGINS` | backend | `http://localhost:5173,https://fixationdisparitycurves.upc.edu` | Comma-separated list of origins allowed by the CORS middleware. Set in the hosting platform (e.g. Render env vars). |
+| `VITE_API_BASE_URL` | frontend (build-time) | `""` (relative) | Absolute URL of the backend service. Must be set before running `npm run build` for production. Example: `https://your-backend.onrender.com`. Leave empty for local dev (the Vite proxy handles `/api` → `localhost:8000`). |
 
 ---
 
@@ -289,7 +290,10 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -
 
 **Errors**
 - `400 Bad Request` — raised for validation failures from `fit_all_models` (wrong number of values, non-finite values). The body is `{ "detail": "..." }`.
+- `429 Too Many Requests` — rate limit exceeded. The endpoint is capped at **30 requests per minute per IP**. This is enough for any real clinical session and blocks scripted abuse. Implemented via `slowapi` (in-memory, no external store required).
 - `500 Internal Server Error` — any other exception bubbled up from GEKKO/NumPy is wrapped as `{ "detail": "Computation failed: ..." }`.
+
+> **Execution model:** every call triggers **immediate synchronous computation** — numpy/gekko runs inline in the HTTP request. There is no queue, no background task, no cron scheduler. Each request is independent and stateless.
 
 ---
 
@@ -305,12 +309,12 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions `[-15, -
           │ Recharts                                                  │ GEKKO solves
           ▼                                                           ▼
    Composed chart + metrics table + classification          Four constrained NLP
-   + PNG export                                             fits → SSE/RMSE/slope
+   + PNG/PDF export                                         fits → SSE/RMSE/slope
 ```
 
-- The frontend is a **single-page app** with component-local React state (`useState`, `useMemo`, `useRef`). There is no global store (no Redux, no Context).
-- The backend is a **pure function wrapped in HTTP** — no database, no auth, no sessions. Each request rebuilds four independent GEKKO models and solves them.
-- CORS is configured in `backend/app/main.py` to accept **only** `http://localhost:5173`. For any other origin, adjust `allow_origins` accordingly.
+- The frontend is a single-page app, state is managed locally with `useState`, `useMemo` and `useRef`. No Redux or Context.
+- The backend has no database, no authentication and no sessions. Each request runs the four GEKKO models independently and returns the result.
+- Allowed origins are controlled via the `ALLOWED_ORIGINS` environment variable (see env vars section). The default includes localhost for development and the production cPanel URL.
 
 ---
 
@@ -370,25 +374,54 @@ Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend t
 
 ## Deployment
 
-- No `Dockerfile`, no `docker-compose*.yml`, no Kubernetes manifests, no `.github/workflows/`, no `.gitlab-ci.yml`. Deployment tooling is **not included in this repository** — *needs manual confirmation* with the project maintainer.
-- For a minimal self-hosted deployment you would typically:
-  1. Build the SPA: `npm run build` (output in `frontend/dist/`).
-  2. Serve `frontend/dist/` from any static host / reverse proxy.
-  3. Run `uvicorn app.main:app --host 0.0.0.0 --port 8000` behind the same reverse proxy, forwarding `/api/*` to it.
-  4. Update `allow_origins` in `backend/app/main.py` to include the real frontend origin.
+### Current setup
 
-  The steps above are not codified anywhere in the repo.
+| Side | Host | URL |
+|---|---|---|
+| Frontend | cPanel (UPC) | <https://fixationdisparitycurves.upc.edu/> |
+| Backend | Render (free tier) | `https://tfg-fixation-disparity-curves-uee8.onrender.com` |
+
+The repository includes a `render.yaml` at the root that configures the Render web service automatically:
+- **Root directory**: `backend/`
+- **Build command**: `pip install -r requirements.txt`
+- **Start command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+> **Free tier limitation:** Render's free plan spins down services after 15 minutes of inactivity. The first request after a cold start can take ~30 seconds. Upgrading to the Starter plan ($7/month) eliminates this.
+
+### Deploying the frontend
+
+```bash
+# 1. Set the backend URL (no trailing slash, no spaces)
+echo "VITE_API_BASE_URL=https://your-backend.onrender.com" > frontend/.env.production
+
+# 2. Build
+cd frontend && npm run build
+
+# 3. Upload frontend/dist/ contents to cPanel public_html (replacing existing files)
+```
+
+### Self-hosted alternative (e.g. UPC server)
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Set ALLOWED_ORIGINS to your frontend domain
+export ALLOWED_ORIGINS=https://fixationdisparitycurves.upc.edu
+```
 
 ---
 
 ## Troubleshooting
 
-- **Frontend cannot reach the API / 404 on `/api/v1/compute`.** Make sure the backend is running on `http://localhost:8000`. The Vite proxy is hardcoded to that URL in `frontend/vite.config.ts`; if you change the backend port you must update the proxy.
-- **CORS error in the browser.** The backend only allows `http://localhost:5173`. If you run the frontend on a different port (e.g. `vite --port 5174`), edit the `allow_origins` list in `backend/app/main.py`.
-- **`GEKKO` install/solve errors.** GEKKO ships a platform-specific solver binary; pip installs that are incompatible with your OS/arch will fail at install or first call. Confirm your Python version and architecture match a published wheel.
-- **`400 Expected exactly 7 y values` / `All y values must be finite numbers`.** The backend validates both the length and finiteness of the `y` array. Fill all 7 fields and avoid empty/NaN/Infinity values.
-- **Stale computation shown after changing inputs.** The SPA uses a version counter to discard stale responses; if you still see one, rerun the fit. Changing the viewing distance resets the computed results by design.
-- **Port 8000 or 5173 already in use.** Stop the conflicting process or pass `--port` to `uvicorn` / `vite` (then update the matching hardcoded origin / proxy).
+- **404 on `/api/v1/compute` or frontend can't reach the API.** Check the backend is running on port 8000. The Vite proxy in `vite.config.ts` is hardcoded to that URL so if you change the port you need to update it there too.
+- **CORS error in browser.** The backend reads the allowed origins from `ALLOWED_ORIGINS` env var. In development it defaults to `http://localhost:5173`, if you run on a different port you need to update that.
+- **GEKKO install or solver errors.** GEKKO downloads a solver binary that depends on the platform. If `pip install gekko` fails or the solver crashes check your Python version and architecture.
+- **400 "Expected exactly 7 y values" or "All y values must be finite".** The backend validates both length and the values themselves, make sure all 7 fields are filled with valid numbers.
+- **Old result shown after changing inputs.** The app uses a version counter to drop stale responses, if you still see it just rerun the fit. Changing viewing distance also clears the current result.
+- **Port already in use.** Kill the other process or change the port with `--port` flag and update the proxy/CORS accordingly.
 
 ---
 
@@ -396,9 +429,8 @@ Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend t
 
 The repository is focused on Phase 1 (see `docs/README.md`). The following are **not** present and are noted here so they are not assumed:
 
-- No `.env` / `.env.example` / any runtime configuration via environment variables.
 - No CI workflow. Tests run locally via `pytest` (backend) and `vitest run` (frontend); no `.github/workflows/` is present.
-- No Docker/container configuration.
+- No Docker/container configuration (a `render.yaml` for Render is present).
 - No authentication, authorization, persistence, or per-patient storage — every request is stateless.
 - No explicit Python version pin in `backend/requirements.txt`.
 - `docs/model-and-errors.md` is currently empty.

@@ -46,22 +46,39 @@ describe("ClassificationCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the best-by-SSE model and selected-model slope", () => {
-    render(<ClassificationCard result={buildResult()} />);
-
+  it("shows only the best curve type (best_by_sse)", () => {
+    const result = buildResult(); // best_by_sse = T2
+    render(<ClassificationCard result={result} />);
     expect(screen.getByText("Type II")).toBeInTheDocument();
-    // Slope for the selected model (T2) = 0.6 at 3-decimal precision.
+    expect(screen.queryByText("Type I")).not.toBeInTheDocument();
+    expect(screen.queryByText("Type III")).not.toBeInTheDocument();
+    expect(screen.queryByText("Type IV")).not.toBeInTheDocument();
+  });
+
+  it("shows the NRMSE for the best type", () => {
+    const result = buildResult();
+    render(<ClassificationCard result={result} />);
+    // rmse=1, yRange=20 → 5.0%
+    expect(screen.getByText(/NRMSE 5\.0%/i)).toBeInTheDocument();
+  });
+
+  it("shows the selected-model slope from best_by_sse", () => {
+    const result = buildResult();
+    render(<ClassificationCard result={result} />);
+    // Slope for T2 (best_by_sse) = 0.6 at 3-decimal precision.
     expect(screen.getByText("0.600")).toBeInTheDocument();
   });
 
   it("shows the measured fixation disparity at x = 0", () => {
-    render(<ClassificationCard result={buildResult()} />);
+    const result = buildResult();
+    render(<ClassificationCard result={result} />);
     // FD = measured y at x = 0 = 2.5.
     expect(screen.getByText("2.500")).toBeInTheDocument();
   });
 
   it("shows the nearest associated phoria (smallest non-zero x with y = 0)", () => {
-    render(<ClassificationCard result={buildResult()} />);
+    const result = buildResult();
+    render(<ClassificationCard result={result} />);
     // measured has y=0 at x=-5 and x=5; the smallest |x| is 5 (−5 comes first
     // in the reducer so it wins the tie).
     expect(screen.getByText("-5.000")).toBeInTheDocument();

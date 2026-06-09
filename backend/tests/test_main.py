@@ -1,6 +1,6 @@
-"""HTTP-level tests for the FastAPI entry point.
+"""HTTP tests for the FastAPI routes.
 
-Uses the Starlette TestClient so no live uvicorn process is needed.
+Uses TestClient so we don't need to start a real uvicorn server.
 """
 from __future__ import annotations
 
@@ -23,14 +23,14 @@ class TestHealthEndpoint:
 
 
 class TestComputeEndpointValidation:
-    """Validation behaviour that does not need the GEKKO solver."""
+    """Input validation tests, these don't need the GEKKO solver to run."""
 
     def test_rejects_missing_body(self, client: TestClient) -> None:
         response = client.post("/api/v1/compute")
         assert response.status_code == 422
 
     def test_rejects_wrong_length(self, client: TestClient) -> None:
-        # Pydantic conlist enforces the min/max length constraint => 422.
+        # pydantic conlist rejects arrays with wrong length with 422
         response = client.post("/api/v1/compute", json={"y": [1.0, 2.0]})
         assert response.status_code == 422
 
@@ -42,22 +42,19 @@ class TestComputeEndpointValidation:
         assert response.status_code == 422
 
     def test_returns_400_for_non_finite_values(self, client: TestClient) -> None:
-        # JSON has no direct Infinity literal, so the request body is crafted
-        # so Pydantic accepts it as float but the fitter rejects finite check.
-        # FastAPI + pydantic v2 parses "inf" as float, which our fitter catches.
+        # JSON doesn't have a real Infinity literal, so we send the raw string
+        # pydantic v2 may accept or reject it - either way we expect 400 or 422
         response = client.post(
             "/api/v1/compute",
             data='{"y": [0.0, 0.0, 0.0, Infinity, 0.0, 0.0, 0.0]}',
             headers={"Content-Type": "application/json"},
         )
-        # Some parsers reject the literal Infinity up-front (422). If accepted,
-        # our fitter converts it into a 400 "All y values must be finite".
         assert response.status_code in (400, 422)
 
 
 @pytest.mark.slow
 class TestComputeEndpointSuccess:
-    """Full end-to-end call that runs the GEKKO solver for all four models."""
+    """Full integration test that actually runs the GEKKO solver."""
 
     def test_returns_full_envelope_for_valid_input(self, client: TestClient) -> None:
         response = client.post(

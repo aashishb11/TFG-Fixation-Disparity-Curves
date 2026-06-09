@@ -1,38 +1,36 @@
 /**
- * Pure utility functions for the chart hover/readout system.
+ * Utility functions for the chart hover readout.
  *
- * These functions are kept in lib/ (not inside CurveChart.tsx) because they
- * contain no React or Recharts dependencies and need to be reasoned about and
- * tested independently of the rendering layer.
+ * Kept separate from CurveChart.tsx so they can be tested independently
+ * without any React or Recharts dependencies.
  */
 
 import { AXIS_DOMAIN, MODEL_KEYS } from "../constants/fdc";
 import type { HoverSnapshot, MergedCurvePoint, ModelKey, Point } from "../types/fdc";
 
-// ─── Thresholds ──────────────────────────────────────────────────────────────
+// --- Thresholds ---
 
 /**
- * Maximum x-distance (in prism diopters) at which a hover position is
- * considered "close enough" to a measured point to show the measured value
- * in the readout panel.
+ * Max x-distance (prism diopters) to consider a hover "close enough" to
+ * a measured point and show the real measured value in the readout.
  */
 export const MEASURED_HOVER_THRESHOLD = 0.45;
 
 /**
- * Snap radius: within this distance the hover locks onto the exact measured
- * x value instead of interpolating. This prevents the readout from showing
- * a slightly off x when the cursor is almost on a real measurement.
+ * If the cursor is within this distance of a measured point, we snap
+ * the x to the exact measured value instead of interpolating.
+ * Avoids showing slightly wrong x values when hovering near a measurement.
  */
 export const MEASURED_POINT_SNAP_THRESHOLD = 0.9;
 
-/** Floating-point tolerance used when looking for an exact curve x match. */
+/** Tolerance for finding an exact x match in the curve data. */
 const CLINICAL_EPSILON = 0.0001;
 
-// ─── Equality / comparison ────────────────────────────────────────────────────
+// --- Equality / comparison ---
 
 /**
- * Returns true when two snapshots represent identical readout state, so the
- * component can skip a React re-render during fast mouse movement.
+ * Checks if two hover snapshots have the same values, so we can skip
+ * a re-render if nothing changed during fast mouse movement.
  */
 export function areHoverSnapshotsEqual(
   current: HoverSnapshot | null,
@@ -49,12 +47,12 @@ export function areHoverSnapshotsEqual(
   );
 }
 
-// ─── Measured-point lookups ───────────────────────────────────────────────────
+// --- Measured point lookups ---
 
 /**
- * Returns the measured y-value when `xValue` is within MEASURED_HOVER_THRESHOLD
- * of a measured point, otherwise null. Does not affect the cursor position —
- * purely used to decide whether to surface the real measurement in the readout.
+ * Returns the measured y-value if xValue is close enough to a measured point,
+ * otherwise null. Only used to decide what to show in the readout, doesn't
+ * affect the cursor position.
  */
 export function getMeasuredValueAtX(
   measured: Point[],
@@ -67,9 +65,9 @@ export function getMeasuredValueAtX(
 }
 
 /**
- * Returns the nearest measured point when it is within MEASURED_POINT_SNAP_THRESHOLD,
- * otherwise null. The snap behaviour means the cursor "sticks" to the real
- * x value when hovering near a measurement, avoiding interpolation noise.
+ * Returns the nearest measured point if it's within the snap threshold,
+ * null otherwise. This makes the cursor stick to real measurement positions
+ * when hovering nearby, avoiding interpolation noise.
  */
 export function getNearestMeasuredPoint(
   measured: Point[],
@@ -89,22 +87,22 @@ export function getNearestMeasuredPoint(
   return nearestDist <= MEASURED_POINT_SNAP_THRESHOLD ? nearest : null;
 }
 
-// ─── Snapshot building ────────────────────────────────────────────────────────
+// --- Snapshot building ---
 
-/** Linear interpolation between two y-values at fractional position `ratio`. */
+/** Linear interpolation between two y values. */
 function interpolateValue(startY: number, endY: number, ratio: number): number {
   return startY + (endY - startY) * ratio;
 }
 
 /**
- * Builds a HoverSnapshot for a given raw x position (as converted from mouse
- * coordinates) by:
+ * Builds the HoverSnapshot for a given x position (from mouse coordinates).
  *
- * 1. Optionally snapping to the nearest measured point if within the snap radius.
- * 2. Looking for an exact curve data point at that x (within CLINICAL_EPSILON).
- * 3. Falling back to linear interpolation between the two bracketing points.
+ * Steps:
+ * 1. Snap to nearest measured point if close enough.
+ * 2. Try to find exact curve point at that x.
+ * 3. Otherwise interpolate between the two bracketing points.
  *
- * Returns null when x is outside the axis domain or the curve data is empty.
+ * Returns null if x is outside the domain or there's no data.
  */
 export function getHoverSnapshotFromX(
   xValue: number,
@@ -112,7 +110,7 @@ export function getHoverSnapshotFromX(
   measured: Point[],
 ): HoverSnapshot | null {
   const snapped = getNearestMeasuredPoint(measured, xValue);
-  // If snapped, use the exact measured x so the readout shows the real point.
+  // use the snapped x so the readout shows the exact measurement position
   const effectiveX = snapped?.x ?? xValue;
 
   if (!Number.isFinite(effectiveX) || data.length === 0) return null;
@@ -129,7 +127,7 @@ export function getHoverSnapshotFromX(
     return null;
   }
 
-  // Fast path: find a curve point that already sits at this exact x value.
+  // try to find an exact match first before doing interpolation
   const exactPoint = data.find(
     (p) => Math.abs(p.x - effectiveX) <= CLINICAL_EPSILON,
   );
@@ -148,7 +146,7 @@ export function getHoverSnapshotFromX(
     };
   }
 
-  // Interpolation path: find the two curve points that bracket effectiveX.
+  // no exact match, interpolate between the two surrounding points
   let lower: MergedCurvePoint | undefined;
   let upper: MergedCurvePoint | undefined;
 
@@ -189,12 +187,11 @@ export function getHoverSnapshotFromX(
   };
 }
 
-// ─── Domain helpers ───────────────────────────────────────────────────────────
+// --- Domain helpers ---
 
 /**
- * Converts a pixel-space x ratio (0–1 across the plot area) into an axis
- * x value in prism diopters. Used by PlotHoverLayer to translate mouse
- * position into domain coordinates.
+ * Converts a pixel ratio (0 to 1 across the plot area) to an axis x value
+ * in prism diopters. Used by PlotHoverLayer to convert mouse position.
  */
 export function pixelRatioToAxisX(ratio: number): number {
   return AXIS_DOMAIN[0] + ratio * (AXIS_DOMAIN[1] - AXIS_DOMAIN[0]);

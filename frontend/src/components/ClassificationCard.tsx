@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { MODEL_CHART_LABELS, MODEL_COLORS } from "../constants/fdc";
+import { computeErrorPct } from "../lib/classification";
 import { deriveClinicalMeasurements } from "../lib/clinicalSummary";
 import type { ComputeResponse } from "../types/fdc";
 
@@ -8,10 +9,15 @@ type ClassificationCardProps = {
 };
 
 export function ClassificationCard({ result }: ClassificationCardProps) {
+  const selectedModelKey = result?.classification.best_by_sse ?? null;
   const selectedModel =
     result === null ? null : result.models[result.classification.best_by_sse];
-  const selectedModelKey = result?.classification.best_by_sse ?? null;
   const clinicalMeasurements = deriveClinicalMeasurements(result?.measured ?? []);
+
+  const bestErrorPct =
+    selectedModelKey && result
+      ? computeErrorPct(result.models[selectedModelKey].rmse, result.measured)
+      : null;
 
   const cardStyle = selectedModelKey
     ? ({ "--card-accent-color": MODEL_COLORS[selectedModelKey] } as CSSProperties)
@@ -19,34 +25,31 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
 
   return (
     <article className="card card--classification" style={cardStyle}>
-      <div className="classification-card__grid">
-        <section className="classification-card__primary">
-          <h3 className="card__title">Classification</h3>
-          {result ? (
-            <>
-              <div className="classification-card__value">
-                <span
-                  style={
-                    selectedModelKey === null
-                      ? undefined
-                      : { color: MODEL_COLORS[selectedModelKey] }
-                  }
-                >
-                  {MODEL_CHART_LABELS[result.classification.best_by_sse]}
-                </span>
-              </div>
-              <span className="classification-card__note">
-                Selected as the primary clinical model based on Sum of Squared
-                Errors (SSE)
+      <section className="classification-card__primary classification-card__primary--list">
+        <h3 className="card__title">Classification</h3>
+        {result && selectedModelKey ? (
+          <div className="classification-best">
+            <span
+              className="classification-best__swatch"
+              style={{ backgroundColor: MODEL_COLORS[selectedModelKey] }}
+            />
+            <span className="classification-best__name">
+              {MODEL_CHART_LABELS[selectedModelKey]}
+            </span>
+            {bestErrorPct !== null && (
+              <span className="classification-best__nrmse">
+                NRMSE {bestErrorPct.toFixed(1)}%
               </span>
-            </>
-          ) : (
-            <div className="card__placeholder">
-              Run analysis to populate the clinical summary.
-            </div>
-          )}
-        </section>
+            )}
+          </div>
+        ) : (
+          <div className="card__placeholder">
+            Run analysis to populate the clinical summary.
+          </div>
+        )}
+      </section>
 
+      <div className="classification-card__stats">
         <section className="classification-card__slope">
           <span className="classification-card__stat-label">Slope</span>
           <strong className="classification-card__stat-value">

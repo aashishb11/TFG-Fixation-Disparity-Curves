@@ -4,7 +4,7 @@ import { parseYValues, validateViewingDistance } from "./input";
 
 describe("validateViewingDistance", () => {
   it("requires a viewing distance to be selected", () => {
-    const result = validateViewingDistance("", "");
+    const result = validateViewingDistance("");
     expect(result).toEqual({
       ok: false,
       field: "viewingDistance",
@@ -12,23 +12,9 @@ describe("validateViewingDistance", () => {
     });
   });
 
-  it("requires a custom distance when 'other' is picked", () => {
-    const result = validateViewingDistance("other", "   ");
-    expect(result).toEqual({
-      ok: false,
-      field: "customDistance",
-      message: "Please type your preferred distance",
-    });
-  });
-
-  it("passes when 'other' is combined with a concrete distance", () => {
-    const result = validateViewingDistance("other", "33");
-    expect(result).toEqual({ ok: true });
-  });
-
-  it("passes for each preset option", () => {
-    expect(validateViewingDistance("40cm", "")).toEqual({ ok: true });
-    expect(validateViewingDistance("25cm", "")).toEqual({ ok: true });
+  it("passes for each supported distance option", () => {
+    expect(validateViewingDistance("40cm")).toEqual({ ok: true });
+    expect(validateViewingDistance("25cm")).toEqual({ ok: true });
   });
 });
 

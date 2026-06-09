@@ -1,11 +1,11 @@
 # Fixation Disparity Curve (FDC) Modeling — TFG
 
-An interactive web application for fitting, visualizing and classifying **Fixation Disparity Curves** from clinical measurements. Given 7 patient responses at fixed stimulus positions, the app fits four curve models (Type I–IV), reports per-model error metrics (SSE, RMSE) and a paper-defined slope, and selects the best-fitting curve type.
+Web application for fitting and visualizing **Fixation Disparity Curves** from clinical measurements. The user enters 7 measured values and the app fits four different curve models (Type I–IV), shows the error metrics (SSE, RMSE) for each one and picks the best fitting curve type.
 
 Reference paper (linked from `docs/`):
 <https://pmc.ncbi.nlm.nih.gov/articles/PMC12682111/pdf/OPO-45-1642.pdf>
 
-> This is **Phase 1** of the TFG (see [`docs/README.md`](docs/README.md)): an end-to-end web app that visualizes FDCs and classifies them into types T1–T4 via polynomial/nonlinear approximation and error comparison.
+> See [`docs/README.md`](docs/README.md) for the full documentation.
 
 ---
 
@@ -170,13 +170,13 @@ npm install
 
 ### Environment variables
 
-**No environment variables are defined or consumed in the repository.** The backend origin is hardcoded to `http://localhost:5173` (CORS) in `backend/app/main.py`, and the frontend dev proxy is hardcoded to `http://localhost:8000` in `frontend/vite.config.ts`. There is no `.env.example` to copy.
+For local development no env vars are needed. For production builds set `VITE_API_BASE_URL` to the backend URL before running `npm run build` (see `frontend/.env.production`). The backend reads `ALLOWED_ORIGINS` to configure CORS — see `docs/README.md` for details.
 
 ---
 
 ## Running the project
 
-The app is designed for local development. There is **no production deployment configuration** in the repository (no Dockerfile, no compose file, no CI). Run the two processes in separate terminals.
+Run the two processes in separate terminals.
 
 ### Backend (dev)
 
@@ -394,15 +394,9 @@ Totals at the time of writing: **26 backend tests** (pytest) and **56 frontend t
 
 ---
 
-## Project status / what is not in the repo
+## What is not in the repo
 
-The repository is focused on Phase 1 (see `docs/README.md`). The following are **not** present and are noted here so they are not assumed:
-
-- No `.env` / `.env.example` / any runtime configuration via environment variables.
-- No CI workflow. Tests run locally via `pytest` (backend) and `vitest run` (frontend); no `.github/workflows/` is present.
-- No Docker/container configuration.
-- No authentication, authorization, persistence, or per-patient storage — every request is stateless.
-- No explicit Python version pin in `backend/requirements.txt`.
-- `docs/model-and-errors.md` is currently empty.
-
-Contributions and clarifications on the above are welcome — when in doubt, prefer editing the existing files over introducing new tooling, and keep the hardcoded dev ports (`5173`, `8000`) consistent across both sides.
+- No CI pipeline. Tests are run locally with `pytest` and `vitest run`.
+- No Docker configuration (there is a `render.yaml` for Render deployments).
+- No authentication or patient data storage — every request is completely stateless.
+- `docs/model-and-errors.md` is still empty, planned for future.
