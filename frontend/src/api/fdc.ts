@@ -12,8 +12,8 @@ type ErrorResponse = {
  * generic HTTP error message.
  */
 export async function computeFits(yValues: number[]): Promise<ComputeResponse> {
-  const base = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
-  const response = await fetch(`${base}/api/v1/compute`, {
+  const base = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+  const response = await fetch(`${base}/v1/compute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ y: yValues }),
