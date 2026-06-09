@@ -17,12 +17,10 @@ from app.services.fdc_fit import fit_all_models
 
 app = FastAPI(title="TFG Fixation Disparity API", version="0.1.0")
 
-# Allow requests from the Vite dev server (http://localhost:5173).
-# In production this list should be replaced with the real origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -35,6 +33,7 @@ class ComputeRequest(BaseModel):
     y: conlist(float, min_length=7, max_length=7)
 
 
+@app.get("/health")
 @app.get("/api/v1/health")
 def health():
     """Liveness probe — returns immediately with no backend computation."""
