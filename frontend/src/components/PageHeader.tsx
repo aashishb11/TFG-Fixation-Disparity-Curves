@@ -1,5 +1,9 @@
 import upcLogo from "../../images/UPC_Logo.png";
 
+const PUBLISHED_PAPER_URL = "https://onlinelibrary.wiley.com/doi/10.1111/opo.70025";
+const UPC_URL = "https://www.upc.edu/ca";
+const ALBCOM_URL = "https://albcom.cs.upc.edu/";
+
 export function PageHeader() {
   return (
     <header className="app-header">
@@ -8,16 +12,49 @@ export function PageHeader() {
           <h1 className="app-title">Fixation Disparity Curve Modeling</h1>
           <p className="app-subtitle">
             Clinical curve fitting and classification for binocular vision
-            assessment
+            assessment according to the{" "}
+            <a
+              className="app-subtitle__paper-link"
+              href={PUBLISHED_PAPER_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              published paper by Marc Argilés &amp; Xavier Molinero
+            </a>
           </p>
+          <div className="app-header__meta">
+            <a
+              className="app-header__meta-link"
+              href={UPC_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              UPC — Universitat Politècnica de Catalunya · BarcelonaTech
+            </a>
+            <span className="app-header__meta-sep" aria-hidden="true" />
+            <a
+              className="app-header__meta-link"
+              href={ALBCOM_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              ALBCOM — Algorithms, Bioinformatics, Complexity and Formal Methods Research Group
+            </a>
+          </div>
         </div>
-        <div className="app-header__brand" aria-label="UPC logo">
+        <a
+          className="app-header__brand"
+          href={UPC_URL}
+          rel="noopener noreferrer"
+          target="_blank"
+          aria-label="Universitat Politècnica de Catalunya website"
+        >
           <img
             alt="UPC logo"
             className="app-header__logo"
             src={upcLogo}
           />
-        </div>
+        </a>
       </div>
     </header>
   );

@@ -1,18 +1,23 @@
 import type { CSSProperties } from "react";
 import { MODEL_CHART_LABELS, MODEL_COLORS } from "../constants/fdc";
+import { computeErrorPct } from "../lib/classification";
 import { deriveClinicalMeasurements } from "../lib/clinicalSummary";
-import type { CompatibleClassification, ComputeResponse } from "../types/fdc";
+import type { ComputeResponse } from "../types/fdc";
 
 type ClassificationCardProps = {
   result: ComputeResponse | null;
-  compatibleModels: CompatibleClassification[];
 };
 
-export function ClassificationCard({ result, compatibleModels }: ClassificationCardProps) {
+export function ClassificationCard({ result }: ClassificationCardProps) {
   const selectedModelKey = result?.classification.best_by_sse ?? null;
   const selectedModel =
     result === null ? null : result.models[result.classification.best_by_sse];
   const clinicalMeasurements = deriveClinicalMeasurements(result?.measured ?? []);
+
+  const bestErrorPct =
+    selectedModelKey && result
+      ? computeErrorPct(result.models[selectedModelKey].rmse, result.measured)
+      : null;
 
   const cardStyle = selectedModelKey
     ? ({ "--card-accent-color": MODEL_COLORS[selectedModelKey] } as CSSProperties)
@@ -22,37 +27,19 @@ export function ClassificationCard({ result, compatibleModels }: ClassificationC
     <article className="card card--classification" style={cardStyle}>
       <section className="classification-card__primary classification-card__primary--list">
         <h3 className="card__title">Classification</h3>
-        {result ? (
-          <div className="classification-compat-list">
-            <span className="classification-compat-list__heading">
-              Compatible types — NRMSE &lt; 10%
+        {result && selectedModelKey ? (
+          <div className="classification-best">
+            <span
+              className="classification-best__swatch"
+              style={{ backgroundColor: MODEL_COLORS[selectedModelKey] }}
+            />
+            <span className="classification-best__name">
+              {MODEL_CHART_LABELS[selectedModelKey]}
             </span>
-            {compatibleModels.length > 0 ? (
-              <ul className="classification-compat-list__items">
-                {compatibleModels.map(({ modelKey, errorPct, isBest }) => (
-                  <li key={modelKey} className="classification-compat-list__row">
-                    <span
-                      className="classification-compat-list__swatch"
-                      style={{ backgroundColor: MODEL_COLORS[modelKey] }}
-                    />
-                    <span className="classification-compat-list__name">
-                      {MODEL_CHART_LABELS[modelKey]}
-                    </span>
-                    <span className="classification-compat-list__error">
-                      {errorPct.toFixed(1)}%
-                    </span>
-                    {isBest ? (
-                      <span className="classification-compat-list__badge">
-                        best
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="classification-compat-list__empty">
-                No curve type has fitting error below 10%.
-              </p>
+            {bestErrorPct !== null && (
+              <span className="classification-best__nrmse">
+                NRMSE {bestErrorPct.toFixed(1)}%
+              </span>
             )}
           </div>
         ) : (

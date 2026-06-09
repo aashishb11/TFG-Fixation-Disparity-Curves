@@ -5,13 +5,11 @@ type ErrorResponse = {
 };
 
 /**
- * Calls the backend `/api/v1/compute` endpoint with the seven measured
- * fixation-disparity y-values and returns the full fitting result.
+ * Sends the 7 y-values to the backend and returns the curve fitting results.
  *
- * We read the response as text first rather than calling `.json()` directly
- * because FastAPI error bodies may be JSON *or* plain strings, and we want
- * to surface `error.detail` (FastAPI's standard error field) when available
- * instead of a generic "HTTP 422" message.
+ * We read response as text before parsing because FastAPI error bodies
+ * have a "detail" field we want to show to the user instead of a
+ * generic HTTP error message.
  */
 export async function computeFits(yValues: number[]): Promise<ComputeResponse> {
   const base = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");

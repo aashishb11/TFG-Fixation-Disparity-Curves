@@ -34,7 +34,7 @@ function waitForNextPaint(): Promise<void> {
 export default function App() {
   const computationVersionRef = useRef(0);
   const [viewingDistance, setViewingDistance] = useState<ViewingDistance | "">(
-    "",
+    "40cm",
   );
   const [yValues, setYValues] = useState<string[]>(() => [
     ...DEFAULT_MEASURED_Y_VALUES,
@@ -262,7 +262,7 @@ export default function App() {
 
         <main className="dashboard">
           <section className="dashboard-grid">
-            <ClassificationCard result={response} compatibleModels={compatibleClassifications} />
+            <ClassificationCard result={response} />
             <AdvancedMetricsSection result={response} />
           </section>
 
