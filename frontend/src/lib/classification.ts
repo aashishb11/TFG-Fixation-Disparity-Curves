@@ -27,3 +27,14 @@ export function getCompatibleClassifications(
     }))
     .sort((a, b) => a.errorPct - b.errorPct);
 }
+
+export function getAllClassifications(
+  response: ComputeResponse,
+): CompatibleClassification[] {
+  const { measured, models, classification } = response;
+  return MODEL_KEYS.map((key) => ({
+    modelKey: key,
+    errorPct: computeErrorPct(models[key].rmse, measured),
+    isBest: key === classification.best_by_sse,
+  })).sort((a, b) => a.errorPct - b.errorPct);
+}

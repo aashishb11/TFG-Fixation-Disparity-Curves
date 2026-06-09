@@ -28,9 +28,9 @@ describe("static chart constants", () => {
     ]);
   });
 
-  it("initializes the measured inputs with seven zero values", () => {
+  it("initializes the measured inputs with seven empty values", () => {
     expect(DEFAULT_MEASURED_Y_VALUES).toEqual([
-      "0", "0", "0", "0", "0", "0", "0",
+      "", "", "", "", "", "", "",
     ]);
     expect(DEFAULT_MEASURED_Y_VALUES).toHaveLength(FIXED_X_VALUES.length);
   });

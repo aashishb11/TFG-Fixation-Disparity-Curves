@@ -109,12 +109,12 @@ describe("App", () => {
 
     expect(measuredInputs()).toHaveLength(7);
     measuredInputs().forEach((input) => {
-      expect(input).toHaveValue(0);
+      expect(input).toHaveValue(null);
     });
 
-    await user.selectOptions(distanceSelect, "40cm");
+    await user.selectOptions(distanceSelect, "25cm");
     measuredInputs().forEach((input) => {
-      expect(input).toHaveValue(0);
+      expect(input).toHaveValue(null);
     });
 
     await user.clear(measuredInputs()[0]);
@@ -125,7 +125,7 @@ describe("App", () => {
     measuredInputs()
       .slice(1)
       .forEach((input) => {
-        expect(input).toHaveValue(0);
+        expect(input).toHaveValue(null);
       });
 
     await user.click(

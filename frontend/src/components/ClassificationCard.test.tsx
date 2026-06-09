@@ -1,8 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { getCompatibleClassifications } from "../lib/classification";
-import type { CompatibleClassification, ComputeResponse, ModelMetrics } from "../types/fdc";
+import type { ComputeResponse, ModelMetrics } from "../types/fdc";
 import { ClassificationCard } from "./ClassificationCard";
 
 function model(overrides: Partial<ModelMetrics> = {}): ModelMetrics {
@@ -39,68 +38,47 @@ function buildResult(): ComputeResponse {
   };
 }
 
-// All four models have rmse=1, yRange=20 → errorPct=5% (all under 10%)
-function buildCompatibleModels(result: ComputeResponse): CompatibleClassification[] {
-  return getCompatibleClassifications(result);
-}
-
 describe("ClassificationCard", () => {
   it("shows a placeholder until a result is available", () => {
-    render(<ClassificationCard result={null} compatibleModels={[]} />);
+    render(<ClassificationCard result={null} />);
     expect(
       screen.getByText(/Run analysis to populate the clinical summary/i),
     ).toBeInTheDocument();
   });
 
-  it("lists all compatible types when multiple are under 10%", () => {
-    const result = buildResult();
-    render(<ClassificationCard result={result} compatibleModels={buildCompatibleModels(result)} />);
-    // All 4 models qualify (5% each)
-    expect(screen.getByText("Type I")).toBeInTheDocument();
-    expect(screen.getByText("Type II")).toBeInTheDocument();
-    expect(screen.getByText("Type III")).toBeInTheDocument();
-    expect(screen.getByText("Type IV")).toBeInTheDocument();
-  });
-
-  it("shows a 'best' badge on the primary classification (best_by_sse)", () => {
+  it("shows only the best curve type (best_by_sse)", () => {
     const result = buildResult(); // best_by_sse = T2
-    render(<ClassificationCard result={result} compatibleModels={buildCompatibleModels(result)} />);
-    expect(screen.getByText("best")).toBeInTheDocument();
+    render(<ClassificationCard result={result} />);
+    expect(screen.getByText("Type II")).toBeInTheDocument();
+    expect(screen.queryByText("Type I")).not.toBeInTheDocument();
+    expect(screen.queryByText("Type III")).not.toBeInTheDocument();
+    expect(screen.queryByText("Type IV")).not.toBeInTheDocument();
   });
 
-  it("shows error percentages for each compatible type", () => {
+  it("shows the NRMSE for the best type", () => {
     const result = buildResult();
-    render(<ClassificationCard result={result} compatibleModels={buildCompatibleModels(result)} />);
+    render(<ClassificationCard result={result} />);
     // rmse=1, yRange=20 → 5.0%
-    const errorLabels = screen.getAllByText("5.0%");
-    expect(errorLabels.length).toBe(4);
-  });
-
-  it("shows 'no compatible type' message when the list is empty", () => {
-    const result = buildResult();
-    render(<ClassificationCard result={result} compatibleModels={[]} />);
-    expect(
-      screen.getByText(/No curve type has fitting error below 10%/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/NRMSE 5\.0%/i)).toBeInTheDocument();
   });
 
   it("shows the selected-model slope from best_by_sse", () => {
     const result = buildResult();
-    render(<ClassificationCard result={result} compatibleModels={buildCompatibleModels(result)} />);
+    render(<ClassificationCard result={result} />);
     // Slope for T2 (best_by_sse) = 0.6 at 3-decimal precision.
     expect(screen.getByText("0.600")).toBeInTheDocument();
   });
 
   it("shows the measured fixation disparity at x = 0", () => {
     const result = buildResult();
-    render(<ClassificationCard result={result} compatibleModels={buildCompatibleModels(result)} />);
+    render(<ClassificationCard result={result} />);
     // FD = measured y at x = 0 = 2.5.
     expect(screen.getByText("2.500")).toBeInTheDocument();
   });
 
   it("shows the nearest associated phoria (smallest non-zero x with y = 0)", () => {
     const result = buildResult();
-    render(<ClassificationCard result={result} compatibleModels={buildCompatibleModels(result)} />);
+    render(<ClassificationCard result={result} />);
     // measured has y=0 at x=-5 and x=5; the smallest |x| is 5 (−5 comes first
     // in the reducer so it wins the tie).
     expect(screen.getByText("-5.000")).toBeInTheDocument();

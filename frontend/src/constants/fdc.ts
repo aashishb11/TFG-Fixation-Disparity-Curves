@@ -19,7 +19,7 @@ export const FIXED_X_VALUES = [-15, -10, -5, 0, 5, 10, 15] as const;
 /** Default measured fixation-disparity values shown on initial load. */
 export const DEFAULT_MEASURED_Y_VALUES = Array.from(
   { length: FIXED_X_VALUES.length },
-  () => "0",
+  () => "",
 );
 
 // ─── Viewing distance UI ──────────────────────────────────────────────────────
