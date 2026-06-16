@@ -109,7 +109,7 @@ The **best-fitting model** is selected by minimizing the error (SSE / RMSE) — 
 
 ## 7. The Application — How It Helps
 
-The web application built for this TFG implements the paper's methodology and makes it **accessible to clinicians without any programming or math knowledge**.
+I built this web application for my TFG to implement the paper's methodology and make it **accessible to clinicians without any programming or math knowledge**.
 
 ### What the clinician does:
 1. Measures the patient's fixation disparity at the 7 prism positions using a Wesson card (takes ~5 minutes in clinic)
@@ -117,7 +117,7 @@ The web application built for this TFG implements the paper's methodology and ma
 3. Enters the 7 values
 4. Clicks "Run Statistical Fit"
 
-### What the application provides instantly:
+### What I made the application provide instantly:
 
 | Feature | Clinical value |
 |---|---|
@@ -130,11 +130,11 @@ The web application built for this TFG implements the paper's methodology and ma
 | **PNG export** | High-resolution image of the chart for including in patient records |
 | **PDF clinical report** | Full report with patient details and results for the clinical file |
 
-### The broader impact:
+### The broader impact I aimed for:
 
-- **Reduces subjectivity** — the same patient measured by two different clinicians will get the same curve type from the application
+- **Reduces subjectivity** — the same patient measured by two different clinicians will get the same curve type from my application
 - **Enables research reproducibility** — studies can use the same model and compare slopes across different populations
-- **Makes advanced analysis accessible** — previously this required MATLAB and knowing how to set up a constrained optimization. Now it works in a browser
+- **Makes advanced analysis accessible** — previously this required MATLAB and knowing how to set up a constrained optimization. With my tool it works in a browser
 - **Faster clinical workflow** — results in seconds instead of manual analysis
 
 ---
