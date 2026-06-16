@@ -21,6 +21,8 @@ describe("PageFooter", () => {
       screen.getByText(/Marc Argilés & Xavier Molinero/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/Copyright © 2026/i)).toBeInTheDocument();
-    expect(screen.getByText(/Developed by Aashish Bhusal/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Developed by Aashish Bhusal/i),
+    ).toBeInTheDocument();
   });
 });

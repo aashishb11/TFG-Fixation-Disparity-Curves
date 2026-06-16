@@ -12,7 +12,9 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
   const selectedModelKey = result?.classification.best_by_sse ?? null;
   const selectedModel =
     result === null ? null : result.models[result.classification.best_by_sse];
-  const clinicalMeasurements = deriveClinicalMeasurements(result?.measured ?? []);
+  const clinicalMeasurements = deriveClinicalMeasurements(
+    result?.measured ?? [],
+  );
 
   const bestErrorPct =
     selectedModelKey && result
@@ -20,7 +22,9 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
       : null;
 
   const cardStyle = selectedModelKey
-    ? ({ "--card-accent-color": MODEL_COLORS[selectedModelKey] } as CSSProperties)
+    ? ({
+        "--card-accent-color": MODEL_COLORS[selectedModelKey],
+      } as CSSProperties)
     : undefined;
 
   return (
@@ -58,7 +62,9 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
                 {selectedModel.slope.toFixed(3)}
                 <span className="stat-unit"> arcmin/Δ</span>
               </>
-            ) : "--"}
+            ) : (
+              "--"
+            )}
           </strong>
           <span className="classification-card__stat-note">
             Reported from the selected clinical model
@@ -73,7 +79,9 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
                 {clinicalMeasurements.fixationDisparity.toFixed(3)}
                 <span className="stat-unit"> arcmin</span>
               </>
-            ) : "--"}
+            ) : (
+              "--"
+            )}
           </strong>
           <span className="summary-stat__meta">Measured at x = 0</span>
         </section>
@@ -86,7 +94,9 @@ export function ClassificationCard({ result }: ClassificationCardProps) {
                 {clinicalMeasurements.associatedPhoria.toFixed(3)}
                 <span className="stat-unit"> Δ</span>
               </>
-            ) : "N/A"}
+            ) : (
+              "N/A"
+            )}
           </strong>
           <span className="summary-stat__meta">
             Nearest x where measured y = 0

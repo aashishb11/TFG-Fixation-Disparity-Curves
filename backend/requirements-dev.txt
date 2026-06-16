@@ -1,4 +1,5 @@
-# Test-time only dependencies. Kept separate from requirements.txt so the
-# runtime image does not pull pytest / httpx into production.
+# Test-time and lint-time only dependencies. Kept separate from requirements.txt
+# so the runtime image does not pull pytest / httpx / ruff into production.
 pytest==9.0.3
 httpx==0.28.1
+ruff==0.14.0

@@ -7,6 +7,7 @@ Using synthetic data means we know the expected result and can check
 that the SSE is close to zero for the matching model, without needing
 real clinical measurements.
 """
+
 from __future__ import annotations
 
 import math
@@ -24,8 +25,8 @@ from app.services.fdc_fit import (
     fit_all_models,
 )
 
-
 # --- Helper functions ---
+
 
 class TestMetricHelpers:
     def test_sse_is_zero_for_identical_arrays(self) -> None:
@@ -56,6 +57,7 @@ class TestMetricHelpers:
 
 # --- Model evaluation ---
 
+
 class TestEvalModel:
     @pytest.fixture
     def xs(self) -> np.ndarray:
@@ -70,14 +72,18 @@ class TestEvalModel:
         # f(x) = 0 + 1*exp(-1*(x-0))
         out = _eval_model("T2", xs, a=0.0, b=1.0, c=1.0, d=0.0)
         np.testing.assert_allclose(
-            out, [math.exp(3), 1.0, math.exp(-3)], rtol=1e-12,
+            out,
+            [math.exp(3), 1.0, math.exp(-3)],
+            rtol=1e-12,
         )
 
     def test_t3_negative_exponential(self, xs: np.ndarray) -> None:
         # f(x) = 0 - 1*exp(1*(x-0))
         out = _eval_model("T3", xs, a=0.0, b=1.0, c=1.0, d=0.0)
         np.testing.assert_allclose(
-            out, [-math.exp(-3), -1.0, -math.exp(3)], rtol=1e-12,
+            out,
+            [-math.exp(-3), -1.0, -math.exp(3)],
+            rtol=1e-12,
         )
 
     def test_t4_arctan_is_odd_about_d(self, xs: np.ndarray) -> None:
@@ -88,6 +94,7 @@ class TestEvalModel:
 
 
 # --- Slope ---
+
 
 class TestSlope:
     def test_t1_slope_matches_cubic_formula(self) -> None:
@@ -105,6 +112,7 @@ class TestSlope:
 
 
 # --- Input validation ---
+
 
 class TestInputValidation:
     def test_rejects_wrong_length(self) -> None:
@@ -128,6 +136,7 @@ class TestInputValidation:
 
 
 # --- End-to-end fits ---
+
 
 def _eval(model: str, xs: np.ndarray, a: float, b: float, c: float, d: float):
     """Small wrapper to generate synthetic y-values for the tests below."""

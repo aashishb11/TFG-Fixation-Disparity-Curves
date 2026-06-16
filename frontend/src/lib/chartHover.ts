@@ -6,7 +6,12 @@
  */
 
 import { AXIS_DOMAIN, MODEL_KEYS } from "../constants/fdc";
-import type { HoverSnapshot, MergedCurvePoint, ModelKey, Point } from "../types/fdc";
+import type {
+  HoverSnapshot,
+  MergedCurvePoint,
+  ModelKey,
+  Point,
+} from "../types/fdc";
 
 // --- Thresholds ---
 

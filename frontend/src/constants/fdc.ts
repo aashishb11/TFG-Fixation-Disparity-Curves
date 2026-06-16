@@ -49,7 +49,8 @@ export const MODEL_DISPLAY_LABELS: Record<ModelKey, string> = {
 };
 
 /** Human-readable label shown in the chart legend. */
-export const MODEL_CHART_LABELS: Record<ModelKey, string> = MODEL_DISPLAY_LABELS;
+export const MODEL_CHART_LABELS: Record<ModelKey, string> =
+  MODEL_DISPLAY_LABELS;
 
 export const MODEL_COLORS: Record<ModelKey, string> = {
   T1: "#d84c4c",

@@ -9,7 +9,10 @@ export type RenderedSvgImage = {
   width: number;
 };
 
-function getSvgDimensions(svg: SVGSVGElement): { height: number; width: number } {
+function getSvgDimensions(svg: SVGSVGElement): {
+  height: number;
+  width: number;
+} {
   const rect = svg.getBoundingClientRect();
   // Fall back through multiple sources: layout rect → attribute → clientWidth.
   const width =

@@ -93,7 +93,9 @@ describe("App", () => {
       .map((option) => option.textContent);
 
     expect(optionLabels).toEqual(["Select a distance", "40 cm", "25 cm"]);
-    expect(screen.queryByLabelText(/Preferred Distance/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/Preferred Distance/i),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the seven measured values editable and does not overwrite them when distance changes", async () => {

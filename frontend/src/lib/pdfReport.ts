@@ -146,12 +146,7 @@ function createFieldBlock(
   };
 }
 
-function drawFieldBlock(
-  pdf: jsPDF,
-  block: FieldBlock,
-  x: number,
-  y: number,
-) {
+function drawFieldBlock(pdf: jsPDF, block: FieldBlock, x: number, y: number) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(8.8);
   pdf.setTextColor(87, 107, 122);
@@ -261,9 +256,24 @@ export function exportClinicalReportPdf({
   const detailsHeight =
     34 + firstRowHeight + 20 + secondRowHeight + 20 + addressBlock.height + 22;
 
-  drawPanel(pdf, margin, detailsTop, contentWidth, detailsHeight, [252, 254, 255]);
+  drawPanel(
+    pdf,
+    margin,
+    detailsTop,
+    contentWidth,
+    detailsHeight,
+    [252, 254, 255],
+  );
   setHexFillColor(pdf, classificationColor);
-  pdf.roundedRect(margin + 14, detailsTop + 16, 4, detailsHeight - 32, 2, 2, "F");
+  pdf.roundedRect(
+    margin + 14,
+    detailsTop + 16,
+    4,
+    detailsHeight - 32,
+    2,
+    2,
+    "F",
+  );
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
@@ -289,7 +299,11 @@ export function exportClinicalReportPdf({
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.5);
   pdf.setTextColor(76, 98, 115);
-  pdf.text("Measured data with selected best-fit regression", margin + 20, chartTop + 24);
+  pdf.text(
+    "Measured data with selected best-fit regression",
+    margin + 20,
+    chartTop + 24,
+  );
 
   const imageAreaWidth = contentWidth - 40;
   const imageAreaHeight = chartHeight - 54;
@@ -335,7 +349,14 @@ export function exportClinicalReportPdf({
   );
   const summaryHeight = 80 + maxDescLines * descLineHeight + 16;
 
-  drawPanel(pdf, margin, summaryTop, summaryWidth, summaryHeight, [251, 253, 255]);
+  drawPanel(
+    pdf,
+    margin,
+    summaryTop,
+    summaryWidth,
+    summaryHeight,
+    [251, 253, 255],
+  );
   drawPanel(
     pdf,
     margin + summaryWidth + 12,

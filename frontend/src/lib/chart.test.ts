@@ -23,10 +23,26 @@ function makeResponse(): ComputeResponse {
       { x: 1, y: 30 },
     ],
     models: {
-      T1: makeModel([[-1, 1], [0, 2], [1, 3]]),
-      T2: makeModel([[-1, 10], [0, 20], [1, 30]]),
-      T3: makeModel([[-1, 100], [0, 200], [1, 300]]),
-      T4: makeModel([[-1, 1000], [0, 2000], [1, 3000]]),
+      T1: makeModel([
+        [-1, 1],
+        [0, 2],
+        [1, 3],
+      ]),
+      T2: makeModel([
+        [-1, 10],
+        [0, 20],
+        [1, 30],
+      ]),
+      T3: makeModel([
+        [-1, 100],
+        [0, 200],
+        [1, 300],
+      ]),
+      T4: makeModel([
+        [-1, 1000],
+        [0, 2000],
+        [1, 3000],
+      ]),
     },
     classification: { best_by_sse: "T1", best_by_rmse: "T1" },
   };
@@ -49,7 +65,10 @@ describe("mergeModelCurves", () => {
   it("truncates to the shortest curve length", () => {
     const response = makeResponse();
     // Shrink T3's curve to two points — merged output should follow suit.
-    response.models.T3 = makeModel([[-1, 100], [0, 200]]);
+    response.models.T3 = makeModel([
+      [-1, 100],
+      [0, 200],
+    ]);
 
     const merged = mergeModelCurves(response);
     expect(merged).toHaveLength(2);

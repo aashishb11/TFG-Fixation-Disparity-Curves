@@ -84,7 +84,10 @@ export function InputPanel({
           </div>
           {xValues.map((xValue, index) => (
             <div key={xValue} className="measurement-list__row">
-              <label className="measurement-list__x" htmlFor={`y-value-${index}`}>
+              <label
+                className="measurement-list__x"
+                htmlFor={`y-value-${index}`}
+              >
                 {xValue}
               </label>
               <input

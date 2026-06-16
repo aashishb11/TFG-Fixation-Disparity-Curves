@@ -28,7 +28,7 @@ describe("computeFits", () => {
     vi.restoreAllMocks();
   });
 
-  it("POSTs the y-vector to /api/v1/compute with JSON content-type", async () => {
+  it("POSTs the y-vector to /v1/compute with JSON content-type", async () => {
     const payload = {
       x: [],
       measured: [],
@@ -44,7 +44,7 @@ describe("computeFits", () => {
     expect(mock).toHaveBeenCalledOnce();
 
     const [url, init] = mock.mock.calls[0] as FetchArgs;
-    expect(url).toBe("/api/v1/compute");
+    expect(url).toBe("/v1/compute");
     expect(init?.method).toBe("POST");
     expect(init?.headers).toEqual({ "Content-Type": "application/json" });
     expect(init?.body).toBe(JSON.stringify({ y: [1, 2, 3, 4, 5, 6, 7] }));
@@ -59,7 +59,9 @@ describe("computeFits", () => {
       }),
     );
 
-    await expect(computeFits([1, 2, 3, 4, 5, 6, 7])).rejects.toThrow("Bad input");
+    await expect(computeFits([1, 2, 3, 4, 5, 6, 7])).rejects.toThrow(
+      "Bad input",
+    );
   });
 
   it("falls back to the raw response text when the error body is not JSON", async () => {
@@ -82,6 +84,8 @@ describe("computeFits", () => {
       mockFetchResponse("", { status: 503, ok: false }),
     );
 
-    await expect(computeFits([1, 2, 3, 4, 5, 6, 7])).rejects.toThrow("HTTP 503");
+    await expect(computeFits([1, 2, 3, 4, 5, 6, 7])).rejects.toThrow(
+      "HTTP 503",
+    );
   });
 });

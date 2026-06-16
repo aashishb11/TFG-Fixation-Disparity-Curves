@@ -76,11 +76,7 @@ export function PdfExportDialog({
         }
       }}
     >
-      <div
-        aria-modal="true"
-        className={getDialogClassName(step)}
-        role="dialog"
-      >
+      <div aria-modal="true" className={getDialogClassName(step)} role="dialog">
         <div className="report-dialog__header">
           <div className="report-dialog__header-copy">
             <span className="report-dialog__eyebrow">PDF export</span>
@@ -165,7 +161,9 @@ export function PdfExportDialog({
                     autoComplete="given-name"
                     className="report-form__control"
                     disabled={isSubmitting}
-                    onChange={(event) => onChange("firstName", event.target.value)}
+                    onChange={(event) =>
+                      onChange("firstName", event.target.value)
+                    }
                     type="text"
                     value={details.firstName}
                   />
@@ -265,7 +263,9 @@ export function PdfExportDialog({
                     autoComplete="street-address"
                     className="report-form__control report-form__textarea"
                     disabled={isSubmitting}
-                    onChange={(event) => onChange("address", event.target.value)}
+                    onChange={(event) =>
+                      onChange("address", event.target.value)
+                    }
                     rows={3}
                     value={details.address}
                   />

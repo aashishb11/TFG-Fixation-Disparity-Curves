@@ -204,15 +204,17 @@ TFG-Fixation-Disparity-Curves/
 │   │   ├── conftest.py               # Puts backend/ on sys.path for imports
 │   │   ├── test_fdc_fit.py           # Unit + integration tests for the fitter
 │   │   └── test_main.py              # HTTP tests via FastAPI TestClient
+│   ├── pyproject.toml                # Project metadata + Ruff lint/format config
 │   ├── pytest.ini                    # pytest config (testpaths, "slow" marker)
 │   ├── requirements.txt              # Pinned runtime dependencies
-│   └── requirements-dev.txt          # Test-only dependencies (pytest, httpx)
+│   └── requirements-dev.txt          # Test/lint-only deps (pytest, httpx, ruff)
 ├── frontend/
 │   ├── index.html                    # SPA entry HTML
 │   ├── package.json                  # Scripts and dependencies
 │   ├── vite.config.ts                # Dev server + /api proxy
 │   ├── vitest.config.ts              # Test runner config (jsdom, coverage)
-│   ├── eslint.config.js              # ESLint flat config
+│   ├── eslint.config.js              # ESLint flat config (+ eslint-config-prettier)
+│   ├── .prettierrc.json / .prettierignore  # Prettier formatting config
 │   ├── tsconfig*.json                # TypeScript project references
 │   ├── .env.development / .env.production  # VITE_API_URL per environment
 │   ├── images/UPC_Logo.png           # Header logo
@@ -281,11 +283,12 @@ I only list technologies that actually appear in the repository
 | Uvicorn | 0.41.0 | ASGI server | Standard production/development server for FastAPI. |
 | pytest | 9.0.3 (dev) | Test runner | Concise tests, fixtures, markers for slow integration tests. |
 | httpx | 0.28.1 (dev) | Test HTTP client | Backs FastAPI's `TestClient` for endpoint tests. |
+| Ruff | 0.14.0 (dev) | Linter + formatter | Single fast tool for lint (`ruff check`) and formatting (`ruff format`); configured in `backend/pyproject.toml`. |
 
 > The thesis brief I was given mentioned SciPy and Ruff as possible technologies.
-> **Neither is present in this repository.** The fitting is performed by **GEKKO**,
-> not `scipy.optimize`, and there is **no Ruff configuration**. I document only
-> what the code actually uses.
+> The fitting is performed by **GEKKO**, not `scipy.optimize`, so **SciPy is not
+> used**. **Ruff is now configured** (see [pyproject.toml](../backend/pyproject.toml))
+> as the backend linter and formatter. I document only what the code actually uses.
 
 ### Frontend
 
@@ -300,9 +303,12 @@ I only list technologies that actually appear in the repository
 | @testing-library/react | ^16.3.2 | Component testing | Encourages behaviour-focused component tests. |
 | ESLint | ^9.39.1 | Linting | Enforces code quality via a flat config. |
 | typescript-eslint | ^8.48.0 | TS-aware lint rules | Type-aware linting for TypeScript sources. |
+| Prettier | ^3.8.4 | Code formatting | Consistent automatic formatting (`.prettierrc.json`); `npm run format` / `format:check`. |
+| eslint-config-prettier | ^10.1.8 | Lint/format harmony | Disables ESLint rules that would conflict with Prettier. |
 
-> **No Prettier configuration is present** in the repository, so formatting is not
-> automated.
+> **Prettier is now configured** for the frontend (`.prettierrc.json`,
+> `.prettierignore`), wired into the ESLint flat config via `eslint-config-prettier`
+> so the linter and formatter do not fight each other.
 
 ### How these support the thesis goals
 
@@ -839,11 +845,14 @@ npm run test:coverage  # coverage report
 > changes as files are added. The categories above are accurate to the current
 > tree.
 
-### Lint / type-check
+### Lint / format / type-check
 
 - Frontend lint: `npm run lint` (ESLint).
+- Frontend format: `npm run format` (write) / `npm run format:check` (verify), via
+  Prettier (`.prettierrc.json`).
 - Frontend type-check: part of `npm run build` (`tsc -b`).
-- There is no Python linter configured (no Ruff/flake8), and no Prettier.
+- Backend lint + format: `ruff check .` and `ruff format .` (configured in
+  `backend/pyproject.toml`; `ruff` is pinned in `requirements-dev.txt`).
 
 ### Suggested additional tests
 
@@ -858,12 +867,13 @@ and that `curve` arrays return the expected length.
 
 | Control | Command / config | Notes |
 |---|---|---|
-| Frontend lint | `npm run lint` ([eslint.config.js](../frontend/eslint.config.js)) | Flat config: `@eslint/js`, `typescript-eslint`, React Hooks, React Refresh. |
+| Frontend lint | `npm run lint` ([eslint.config.js](../frontend/eslint.config.js)) | Flat config: `@eslint/js`, `typescript-eslint`, React Hooks, React Refresh, `eslint-config-prettier`. |
+| Frontend format | `npm run format` / `npm run format:check` | Prettier ([.prettierrc.json](../frontend/.prettierrc.json)). |
 | Frontend type-check | `npm run build` → `tsc -b` | Strict TS via [tsconfig.app.json](../frontend/tsconfig.app.json) project references. |
 | Frontend tests | `npm test` / `npm run test:coverage` | Vitest + jsdom. |
+| Backend lint + format | `ruff check .` / `ruff format .` | Ruff, configured in [pyproject.toml](../backend/pyproject.toml). |
 | Backend tests | `pytest` (with `requirements-dev.txt`) | pytest with a `slow` marker. |
 | Dependency pinning | [requirements.txt](../backend/requirements.txt) (exact `==`), [package-lock.json](../frontend/package-lock.json) | Reproducible installs. |
-| Python lint/format | — | Not configured (no Ruff, no Prettier). |
 | CI | — | No `.github/workflows/` present; checks are run locally. `TODO: verify`. |
 
 ---
@@ -935,14 +945,17 @@ behind a reverse proxy that forwards `/api` to the FastAPI backend.
 | `ALLOWED_ORIGINS` | backend | `http://localhost:5173,https://fixationdisparitycurves.upc.edu` | Read into `_allowed_origins`; **currently unused by the CORS middleware** (see Section 6). |
 | `ROOT_PATH` | backend | `""` | Path prefix for correct docs/OpenAPI behind a proxy. |
 
-### Tests / lint
+### Tests / lint / format
 
 ```bash
-# backend
+# backend — tests, lint, format
 cd backend && pip install -r requirements-dev.txt && pytest
+ruff check .          # lint
+ruff format --check . # verify formatting (drop --check to apply)
 
-# frontend
+# frontend — tests, lint, format
 cd frontend && npm test && npm run lint
+npm run format:check  # verify formatting (npm run format to apply)
 ```
 
 ---
@@ -1046,8 +1059,8 @@ classDiagram
 - **Deployment limitations.** The reference deployment relies on the production
   build being served behind a proxy that maps `/api`; the free-tier backend may
   cold-start. CORS is currently permissive and should be tightened (Section 6).
-- **Testing limitations.** There is no CI pipeline and no Python linter; tests run
-  locally.
+- **Testing limitations.** There is no CI pipeline; tests, lint (Ruff/ESLint), and
+  formatting (Ruff/Prettier) are run locally rather than enforced automatically.
 - **Possible improvements.** Richer, real-data validation sets; clearer
   natural-language explanation of why a type was chosen; PDF/report enhancements;
   optional persistent project/session storage (with the privacy implications that

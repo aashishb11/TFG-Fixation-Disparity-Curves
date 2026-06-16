@@ -31,15 +31,17 @@ I also run the backend (`uvicorn app.main:app --reload --port 8000` from
 
 ## Scripts
 
-| Script | Command | Purpose |
-|---|---|---|
-| `npm run dev` | `vite` | Dev server with HMR. |
-| `npm run build` | `tsc -b && vite build` | Type-check then build into `dist/`. |
-| `npm run preview` | `vite preview` | Serve the production build locally. |
-| `npm run lint` | `eslint .` | Lint the sources. |
-| `npm test` | `vitest run` | Run the test suite once. |
-| `npm run test:watch` | `vitest` | Tests in watch mode. |
-| `npm run test:coverage` | `vitest run --coverage` | Tests with coverage. |
+| Script                  | Command                 | Purpose                             |
+| ----------------------- | ----------------------- | ----------------------------------- |
+| `npm run dev`           | `vite`                  | Dev server with HMR.                |
+| `npm run build`         | `tsc -b && vite build`  | Type-check then build into `dist/`. |
+| `npm run preview`       | `vite preview`          | Serve the production build locally. |
+| `npm run lint`          | `eslint .`              | Lint the sources.                   |
+| `npm run format`        | `prettier --write .`    | Format the sources with Prettier.   |
+| `npm run format:check`  | `prettier --check .`    | Verify formatting without writing.  |
+| `npm test`              | `vitest run`            | Run the test suite once.            |
+| `npm run test:watch`    | `vitest`                | Tests in watch mode.                |
+| `npm run test:coverage` | `vitest run --coverage` | Tests with coverage.                |
 
 ## How the frontend is organised
 

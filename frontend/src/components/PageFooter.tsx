@@ -19,10 +19,16 @@ export function PageFooter() {
           <span className="app-footer__credits-authors">
             Marc Argilés &amp; Xavier Molinero
           </span>
-          <span className="app-footer__credits-dot" aria-hidden="true">·</span>
+          <span className="app-footer__credits-dot" aria-hidden="true">
+            ·
+          </span>
           <span className="app-footer__credits-copy">Copyright © 2026</span>
-          <span className="app-footer__credits-dot" aria-hidden="true">·</span>
-          <span className="app-footer__credits-dev">Developed by Aashish Bhusal</span>
+          <span className="app-footer__credits-dot" aria-hidden="true">
+            ·
+          </span>
+          <span className="app-footer__credits-dev">
+            Developed by Aashish Bhusal
+          </span>
         </div>
       </div>
     </footer>

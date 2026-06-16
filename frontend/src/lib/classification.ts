@@ -1,5 +1,9 @@
 import { MODEL_KEYS } from "../constants/fdc";
-import type { CompatibleClassification, ComputeResponse, Point } from "../types/fdc";
+import type {
+  CompatibleClassification,
+  ComputeResponse,
+  Point,
+} from "../types/fdc";
 
 // NRMSE: normalize RMSE by the y-value range of the measured data.
 // errorPct = (rmse / yRange) × 100, where yRange = max(y) − min(y).

@@ -248,7 +248,9 @@
   text-decoration-thickness: 1px;
   text-decoration-color: rgba(47, 110, 165, 0.42);
   text-underline-offset: 0.2rem;
-  transition: color 0.16s ease, text-decoration-color 0.16s ease;
+  transition:
+    color 0.16s ease,
+    text-decoration-color 0.16s ease;
 }
 
 .app-footer__link:hover {
@@ -447,7 +449,9 @@
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .advanced-metrics__toggle::after {
@@ -573,7 +577,9 @@
   background: var(--color-surface-secondary);
   color: var(--color-text-primary);
   font: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .select-field {
@@ -671,7 +677,9 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease,
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
     background-color 0.15s ease;
 }
 
@@ -813,7 +821,9 @@
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -4px);
-  transition: opacity 0.14s ease, transform 0.14s ease;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
 }
 
 .metric-tooltip__content::before {
@@ -872,8 +882,14 @@
   transform: rotate(45deg);
 }
 
-.metric-table th:not(:first-child) .metric-tooltip:hover .metric-tooltip__content,
-.metric-table th:not(:first-child) .metric-tooltip:focus-within .metric-tooltip__content {
+.metric-table
+  th:not(:first-child)
+  .metric-tooltip:hover
+  .metric-tooltip__content,
+.metric-table
+  th:not(:first-child)
+  .metric-tooltip:focus-within
+  .metric-tooltip__content {
   transform: translateY(0);
 }
 
@@ -1071,7 +1087,9 @@
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
 
 .export-menu__item:hover,
@@ -1358,7 +1376,9 @@
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.16s ease, border-color 0.16s ease,
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
     transform 0.16s ease;
 }
 
@@ -1405,7 +1425,9 @@
   color: var(--color-text-primary);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .report-choice-card:hover:not(:disabled),
@@ -1512,7 +1534,9 @@
   color: var(--color-text-primary);
   font: inherit;
   line-height: 1.35;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .report-form__control:focus {

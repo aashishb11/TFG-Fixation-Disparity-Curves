@@ -48,10 +48,7 @@ function buildActiveRowStyle(modelColor: string): CSSProperties {
   } as CSSProperties;
 }
 
-function MetricHeaderTooltip({
-  description,
-  label,
-}: MetricHeaderTooltipProps) {
+function MetricHeaderTooltip({ description, label }: MetricHeaderTooltipProps) {
   const tooltipId = useId();
 
   return (
@@ -115,7 +112,11 @@ export function MetricsTable({ result }: MetricsTableProps) {
                     ? "metric-table__row metric-table__row--active"
                     : "metric-table__row"
                 }
-                style={isBestFit ? buildActiveRowStyle(MODEL_COLORS[modelKey]) : undefined}
+                style={
+                  isBestFit
+                    ? buildActiveRowStyle(MODEL_COLORS[modelKey])
+                    : undefined
+                }
               >
                 <td>{MODEL_DISPLAY_LABELS[modelKey]}</td>
                 <td>{model.sse.toFixed(3)}</td>

@@ -42,11 +42,16 @@ export default function App() {
   const [response, setResponse] = useState<ComputeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [hoverSnapshot, setHoverSnapshot] = useState<HoverSnapshot | null>(null);
-  const [exportDialogStep, setExportDialogStep] = useState<ExportDialogStep>(null);
+  const [hoverSnapshot, setHoverSnapshot] = useState<HoverSnapshot | null>(
+    null,
+  );
+  const [exportDialogStep, setExportDialogStep] =
+    useState<ExportDialogStep>(null);
   const [reportSubjectDetails, setReportSubjectDetails] =
     useState<ReportSubjectDetails>({ ...EMPTY_REPORT_SUBJECT_DETAILS });
-  const [exportDialogError, setExportDialogError] = useState<string | null>(null);
+  const [exportDialogError, setExportDialogError] = useState<string | null>(
+    null,
+  );
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const chartRef = useRef<HTMLDivElement | null>(null);
   const pdfChartRef = useRef<HTMLDivElement | null>(null);
@@ -165,7 +170,9 @@ export default function App() {
         });
 
         if (chartImage === null) {
-          throw new Error("The report chart could not be prepared for PDF export.");
+          throw new Error(
+            "The report chart could not be prepared for PDF export.",
+          );
         }
 
         exportClinicalReportPdf({

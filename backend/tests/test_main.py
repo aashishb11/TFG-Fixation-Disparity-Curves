@@ -2,6 +2,7 @@
 
 Uses TestClient so we don't need to start a real uvicorn server.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -17,7 +18,7 @@ def client() -> TestClient:
 
 class TestHealthEndpoint:
     def test_returns_ok(self, client: TestClient) -> None:
-        response = client.get("/api/v1/health")
+        response = client.get("/v1/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
@@ -26,17 +27,17 @@ class TestComputeEndpointValidation:
     """Input validation tests, these don't need the GEKKO solver to run."""
 
     def test_rejects_missing_body(self, client: TestClient) -> None:
-        response = client.post("/api/v1/compute")
+        response = client.post("/v1/compute")
         assert response.status_code == 422
 
     def test_rejects_wrong_length(self, client: TestClient) -> None:
         # pydantic conlist rejects arrays with wrong length with 422
-        response = client.post("/api/v1/compute", json={"y": [1.0, 2.0]})
+        response = client.post("/v1/compute", json={"y": [1.0, 2.0]})
         assert response.status_code == 422
 
     def test_rejects_non_numeric_value(self, client: TestClient) -> None:
         response = client.post(
-            "/api/v1/compute",
+            "/v1/compute",
             json={"y": [0.0, 0.0, 0.0, "not-a-number", 0.0, 0.0, 0.0]},
         )
         assert response.status_code == 422
@@ -45,7 +46,7 @@ class TestComputeEndpointValidation:
         # JSON doesn't have a real Infinity literal, so we send the raw string
         # pydantic v2 may accept or reject it - either way we expect 400 or 422
         response = client.post(
-            "/api/v1/compute",
+            "/v1/compute",
             data='{"y": [0.0, 0.0, 0.0, Infinity, 0.0, 0.0, 0.0]}',
             headers={"Content-Type": "application/json"},
         )
@@ -58,7 +59,7 @@ class TestComputeEndpointSuccess:
 
     def test_returns_full_envelope_for_valid_input(self, client: TestClient) -> None:
         response = client.post(
-            "/api/v1/compute",
+            "/v1/compute",
             json={"y": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]},
         )
         assert response.status_code == 200

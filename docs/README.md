@@ -70,17 +70,19 @@ I only used the technologies actually present in the repository.
 - [GEKKO 1.3.2](https://gekko.readthedocs.io/) for constrained nonlinear fitting
 - [slowapi 0.1.9](https://pypi.org/project/slowapi/) for per-IP rate limiting
 - [Uvicorn 0.41.0](https://www.uvicorn.org/) as the ASGI server
+- [Ruff 0.14.0](https://docs.astral.sh/ruff/) (dev) for linting and formatting
 
 **Frontend**
 - [React 19.2](https://react.dev/) + [TypeScript 5.9](https://www.typescriptlang.org/)
 - [Vite 7.3](https://vitejs.dev/) (dev server, bundler, proxy)
+- [Prettier 3.8](https://prettier.io/) (dev) for code formatting
 - [Recharts 3.7](https://recharts.org/) for the curve/scatter chart
 - [jsPDF 4.2](https://github.com/parallax/jsPDF) for the PDF clinical report
 - ESLint 9 with `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`
 
-> I did **not** use SciPy or Ruff (despite those being common in this space) — the
-> fitting is done with GEKKO and there is no Python linter configured. There is
-> also no Prettier configuration.
+> I did **not** use SciPy — the fitting is done with GEKKO, not `scipy.optimize`.
+> For code quality I configured **Ruff** (lint + format) on the backend via
+> `backend/pyproject.toml` and **Prettier** on the frontend via `.prettierrc.json`.
 
 ---
 
@@ -128,11 +130,13 @@ TFG-Fixation-Disparity-Curves/
 │   │   ├── conftest.py               # Adds backend/ to sys.path for tests
 │   │   ├── test_fdc_fit.py           # Unit + integration tests for the fitter
 │   │   └── test_main.py              # HTTP tests via FastAPI TestClient
+│   ├── pyproject.toml                # Project metadata + Ruff lint/format config
 │   ├── pytest.ini                    # pytest config (testpaths, markers)
 │   ├── requirements.txt              # Pinned runtime Python deps
-│   └── requirements-dev.txt          # Test-time deps (pytest, httpx)
+│   └── requirements-dev.txt          # Test/lint-time deps (pytest, httpx, ruff)
 ├── frontend/
 │   ├── images/UPC_Logo.png           # Header logo
+│   ├── .prettierrc.json              # Prettier formatting config
 │   ├── src/
 │   │   ├── api/fdc.ts                # computeFits() — POST /v1/compute
 │   │   ├── components/               # InputPanel, CurveChart, ClassificationCard, …
@@ -260,14 +264,19 @@ All scripts declared in `frontend/package.json`:
 | `npm test`      | `vitest run`       | Run the Vitest unit-test suite once and exit.         |
 | `npm run test:watch` | `vitest`      | Run Vitest in watch mode during development.          |
 | `npm run test:coverage` | `vitest run --coverage` | Run Vitest and emit coverage under `coverage/`. |
+| `npm run format` | `prettier --write .` | Format the frontend sources with Prettier.        |
+| `npm run format:check` | `prettier --check .` | Verify formatting without writing.               |
 
-The backend has **no script manifest** (no Makefile, no `pyproject.toml`). I run
-`uvicorn` or `pytest` directly:
+The backend has no npm-style script manifest; `backend/pyproject.toml` holds
+project metadata and the Ruff configuration (the pytest config stays in
+`pytest.ini`). I run the tools directly:
 
 ```bash
 cd backend
-pip install -r requirements-dev.txt   # test deps (once)
+pip install -r requirements-dev.txt   # test + lint deps (once)
 pytest                                 # run the Python test suite
+ruff check .                           # lint
+ruff format .                          # format (use --check to verify only)
 ```
 
 ---
@@ -367,10 +376,12 @@ Fit the four FDC models to 7 measured y-values at the fixed x positions
 ## Linting, formatting, testing
 
 - **Frontend lint**: `npm run lint` (ESLint flat config in
-  `frontend/eslint.config.js`).
+  `frontend/eslint.config.js`, with `eslint-config-prettier` to avoid clashes).
+- **Frontend format**: `npm run format` / `npm run format:check` (Prettier,
+  `frontend/.prettierrc.json`).
 - **Frontend type-check**: part of `npm run build` (`tsc -b`, strict mode).
-- **Formatter**: no Prettier configuration in the repo.
-- **Backend lint**: none configured (no Ruff/flake8).
+- **Backend lint + format**: `ruff check .` and `ruff format .` (Ruff, configured
+  in `backend/pyproject.toml`).
 
 ### Tests
 
@@ -463,4 +474,5 @@ I note the following so they are not assumed:
 - No authentication, authorization, persistence, or per-patient storage — every
   request is stateless.
 - No explicit Python version pin in `backend/requirements.txt`.
-- No Ruff and no Prettier configuration.
+- No CI enforcement of the checks — Ruff (backend) and ESLint/Prettier (frontend)
+  are configured but run locally, not in a pipeline.

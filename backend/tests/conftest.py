@@ -1,6 +1,7 @@
 """Ensure the backend package is importable when pytest is invoked from the
 repository root or the backend/ directory. This mirrors how uvicorn is launched
 from backend/ with ``uvicorn app.main:app``."""
+
 from __future__ import annotations
 
 import sys

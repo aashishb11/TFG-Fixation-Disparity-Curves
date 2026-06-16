@@ -29,7 +29,8 @@ export function PageHeader() {
               rel="noopener noreferrer"
               target="_blank"
             >
-              ALBCOM — Algorithms, Bioinformatics, Complexity and Formal Methods Research Group
+              ALBCOM — Algorithms, Bioinformatics, Complexity and Formal Methods
+              Research Group
             </a>
           </div>
         </div>
@@ -40,11 +41,7 @@ export function PageHeader() {
           target="_blank"
           aria-label="Universitat Politècnica de Catalunya website"
         >
-          <img
-            alt="UPC logo"
-            className="app-header__logo"
-            src={upcLogo}
-          />
+          <img alt="UPC logo" className="app-header__logo" src={upcLogo} />
         </a>
       </div>
     </header>

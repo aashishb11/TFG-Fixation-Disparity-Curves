@@ -50,9 +50,7 @@ describe("MetricsTable", () => {
 
   it("marks the best-by-SSE row with the active modifier class", () => {
     const { container } = render(<MetricsTable result={buildResult()} />);
-    const activeRows = container.querySelectorAll(
-      ".metric-table__row--active",
-    );
+    const activeRows = container.querySelectorAll(".metric-table__row--active");
     expect(activeRows).toHaveLength(1);
     expect(activeRows[0]?.textContent).toContain("Type I");
   });

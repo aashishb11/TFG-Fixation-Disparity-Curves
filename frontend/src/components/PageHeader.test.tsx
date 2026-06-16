@@ -15,9 +15,7 @@ describe("PageHeader", () => {
     expect(
       screen.getByText(/Clinical curve fitting and classification/i),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/Developed by Aashish/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Developed by Aashish/i)).not.toBeInTheDocument();
   });
 
   it("renders the ALBCOM link with the expected href and secure external attributes", () => {

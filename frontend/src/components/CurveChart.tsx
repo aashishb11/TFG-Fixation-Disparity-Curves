@@ -37,7 +37,12 @@ import {
   pixelRatioToAxisX,
 } from "../lib/chartHover";
 import { ExportMenu } from "./ExportMenu";
-import type { HoverSnapshot, MergedCurvePoint, ModelKey, Point } from "../types/fdc";
+import type {
+  HoverSnapshot,
+  MergedCurvePoint,
+  ModelKey,
+  Point,
+} from "../types/fdc";
 
 type CurveChartProps = {
   bestModel: ModelKey | null;
@@ -186,11 +191,16 @@ function getChartLineWidth(
   return modelKey === bestModel ? 4.6 : 2.85;
 }
 
-function shouldRenderBestModelHalo(bestModel: ModelKey | null): bestModel is ModelKey {
+function shouldRenderBestModelHalo(
+  bestModel: ModelKey | null,
+): bestModel is ModelKey {
   return bestModel !== null;
 }
 
-function getLegendItems(bestModel: ModelKey | null, compatibleModels: ModelKey[]) {
+function getLegendItems(
+  bestModel: ModelKey | null,
+  compatibleModels: ModelKey[],
+) {
   return [
     {
       color: MEASURED_DATA_COLOR,
@@ -210,7 +220,11 @@ function getLegendItems(bestModel: ModelKey | null, compatibleModels: ModelKey[]
   ];
 }
 
-function getYAxisLabelPosition(plotAreaX: number, plotAreaY: number, plotAreaHeight: number) {
+function getYAxisLabelPosition(
+  plotAreaX: number,
+  plotAreaY: number,
+  plotAreaHeight: number,
+) {
   return {
     x: Math.max(40, plotAreaX - 84),
     y: plotAreaY + plotAreaHeight / 2 + 12,
@@ -253,11 +267,16 @@ function getMeasuredHoverPointX(snapshot: HoverSnapshot | null): number | null {
   return snapshot.x;
 }
 
-function isHoverActive(snapshot: HoverSnapshot | null): snapshot is HoverSnapshot {
+function isHoverActive(
+  snapshot: HoverSnapshot | null,
+): snapshot is HoverSnapshot {
   return snapshot !== null;
 }
 
-function useStableLegendItems(bestModel: ModelKey | null, compatibleModels: ModelKey[]) {
+function useStableLegendItems(
+  bestModel: ModelKey | null,
+  compatibleModels: ModelKey[],
+) {
   return useMemo(
     () => getLegendItems(bestModel, compatibleModels),
     [bestModel, compatibleModels],
@@ -269,7 +288,9 @@ function useStablePatientLimitMarkers(measured: Point[]) {
 }
 
 function useHoverUpdater() {
-  const [hoverSnapshot, setHoverSnapshot] = useState<HoverSnapshot | null>(null);
+  const [hoverSnapshot, setHoverSnapshot] = useState<HoverSnapshot | null>(
+    null,
+  );
   const frameRef = useRef<number | null>(null);
   const pendingSnapshotRef = useRef<HoverSnapshot | null>(null);
 
@@ -324,13 +345,7 @@ const TooltipPlaceholder = () => (
 function ChartHighlightDefs({ glowFilterId }: { glowFilterId: string }) {
   return (
     <defs>
-      <filter
-        id={glowFilterId}
-        height="180%"
-        width="180%"
-        x="-40%"
-        y="-40%"
-      >
+      <filter id={glowFilterId} height="180%" width="180%" x="-40%" y="-40%">
         <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2.4" />
         <feColorMatrix
           in="blur"
@@ -398,7 +413,10 @@ function CentralXAxisTickMarker({ tick }: { tick: number }) {
         }
 
         return (
-          <g aria-hidden="true" transform={`translate(${props.cx}, ${props.cy})`}>
+          <g
+            aria-hidden="true"
+            transform={`translate(${props.cx}, ${props.cy})`}
+          >
             <line
               stroke="#9ab1c2"
               strokeWidth={1}
@@ -450,12 +468,14 @@ export const CurveChart = memo(function CurveChart({
   }, [hoverSnapshot, onHoverSnapshotChange]);
 
   const getCurveOpacity = useCallback(
-    (modelKey: ModelKey): number => getChartLineOpacity(compatibleModels, bestModel, modelKey),
+    (modelKey: ModelKey): number =>
+      getChartLineOpacity(compatibleModels, bestModel, modelKey),
     [compatibleModels, bestModel],
   );
 
   const getCurveWidth = useCallback(
-    (modelKey: ModelKey): number => getChartLineWidth(compatibleModels, bestModel, modelKey),
+    (modelKey: ModelKey): number =>
+      getChartLineWidth(compatibleModels, bestModel, modelKey),
     [compatibleModels, bestModel],
   );
 
@@ -464,10 +484,7 @@ export const CurveChart = memo(function CurveChart({
       <div className="chart-card__header">
         <h3 className="card__title">Fixation Disparity Curve Visualization</h3>
         {canExport ? (
-          <ExportMenu
-            onDownloadPdf={onExportPdf}
-            onDownloadPng={onExportPng}
-          />
+          <ExportMenu onDownloadPdf={onExportPdf} onDownloadPng={onExportPng} />
         ) : null}
       </div>
 

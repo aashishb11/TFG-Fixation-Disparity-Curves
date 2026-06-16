@@ -1,11 +1,16 @@
 """
 FastAPI entry point for the Fixation Disparity Curve API.
 
-Routes:
-  GET  /api/v1/health   - simple health check, returns {"status": "ok"}
-  POST /api/v1/compute  - receives 7 y-values, runs the curve fitting and
-                          returns results for all four models + classification
+Routes (as FastAPI receives them after nginx strips /api):
+  GET  /health        - liveness probe, returns {"status": "ok"}
+  GET  /v1/health     - same, versioned path
+  POST /v1/compute    - receives 7 y-values, returns fits for all models + classification
+
+Externally (via nginx proxy at /api):
+  GET  /api/health
+  POST /api/v1/compute
 """
+
 from __future__ import annotations
 
 import os
@@ -21,7 +26,8 @@ from app.services.fdc_fit import fit_all_models
 
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="TFG Fixation Disparity API", version="0.1.0")
+_root_path = os.environ.get("ROOT_PATH", "")
+app = FastAPI(title="TFG Fixation Disparity API", version="0.1.0", root_path=_root_path)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -47,13 +53,13 @@ class ComputeRequest(BaseModel):
 
 
 @app.get("/health")
-@app.get("/api/v1/health")
+@app.get("/v1/health")
 def health():
     """Simple health check."""
     return {"status": "ok"}
 
 
-@app.post("/api/v1/compute")
+@app.post("/v1/compute")
 @limiter.limit("30/minute")
 def compute(request: Request, req: ComputeRequest):
     """
@@ -66,6 +72,6 @@ def compute(request: Request, req: ComputeRequest):
     try:
         return fit_all_models(req.y)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Computation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Computation failed: {e}") from e
