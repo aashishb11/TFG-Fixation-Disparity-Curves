@@ -4,17 +4,23 @@ import { describe, expect, it } from "vitest";
 import { PageFooter } from "./PageFooter";
 
 describe("PageFooter", () => {
-  it("renders the copyright", () => {
+  it("renders the rdlab host credit with the expected link", () => {
     render(<PageFooter />);
 
-    expect(screen.getByText(/Copyright © 2026/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Marc Argil/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Xavier Molinero/i)).not.toBeInTheDocument();
+    const hostLink = screen.getByRole("link", { name: /rdlab \(UPC\)/i });
+
+    expect(hostLink).toHaveAttribute("href", "https://rdlab.cs.upc.edu/");
+    expect(hostLink).toHaveAttribute("target", "_blank");
+    expect(hostLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("renders the developer credit", () => {
+  it("renders the authors, copyright, and developer credit", () => {
     render(<PageFooter />);
 
+    expect(
+      screen.getByText(/Marc Argilés & Xavier Molinero/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Copyright © 2026/i)).toBeInTheDocument();
     expect(screen.getByText(/Developed by Aashish Bhusal/i)).toBeInTheDocument();
   });
 });

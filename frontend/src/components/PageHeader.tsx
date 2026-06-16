@@ -1,8 +1,7 @@
 import upcLogo from "../../images/UPC_Logo.png";
 
-const PUBLISHED_PAPER_URL = "https://onlinelibrary.wiley.com/doi/10.1111/opo.70025";
 const UPC_URL = "https://www.upc.edu/ca";
-const ALBCOM_URL = "https://albcom.cs.upc.edu/";
+const ALBCOM_URL = "https://futur.upc.edu/ALBCOM?locale=en";
 
 export function PageHeader() {
   return (
@@ -12,15 +11,7 @@ export function PageHeader() {
           <h1 className="app-title">Fixation Disparity Curve Modeling</h1>
           <p className="app-subtitle">
             Clinical curve fitting and classification for binocular vision
-            assessment according to the{" "}
-            <a
-              className="app-subtitle__paper-link"
-              href={PUBLISHED_PAPER_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              published paper by Marc Argilés &amp; Xavier Molinero
-            </a>
+            assessment.
           </p>
           <div className="app-header__meta">
             <a

@@ -196,6 +196,12 @@
   gap: 0.6rem;
 }
 
+.app-footer__host {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .app-footer__credits {
   display: flex;
   flex-wrap: wrap;

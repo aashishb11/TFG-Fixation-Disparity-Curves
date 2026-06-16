@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { PageHeader } from "./PageHeader";
 
 describe("PageHeader", () => {
-  it("renders the title and subtitle with the paper link", () => {
+  it("renders the title and subtitle", () => {
     render(<PageHeader />);
 
     expect(
@@ -20,18 +20,16 @@ describe("PageHeader", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders the paper link with the expected secure external attributes", () => {
+  it("renders the ALBCOM link with the expected href and secure external attributes", () => {
     render(<PageHeader />);
 
-    const paperLink = screen.getByRole("link", {
-      name: /published paper by Marc Argil/i,
-    });
+    const albcomLink = screen.getByRole("link", { name: /ALBCOM/i });
 
-    expect(paperLink).toHaveAttribute(
+    expect(albcomLink).toHaveAttribute(
       "href",
-      "https://onlinelibrary.wiley.com/doi/10.1111/opo.70025",
+      "https://futur.upc.edu/ALBCOM?locale=en",
     );
-    expect(paperLink).toHaveAttribute("target", "_blank");
-    expect(paperLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(albcomLink).toHaveAttribute("target", "_blank");
+    expect(albcomLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 });
