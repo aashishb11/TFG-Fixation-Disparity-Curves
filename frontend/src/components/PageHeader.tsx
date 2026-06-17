@@ -2,6 +2,7 @@ import upcLogo from "../../images/UPC_Logo.png";
 
 const UPC_URL = "https://www.upc.edu/ca";
 const ALBCOM_URL = "https://futur.upc.edu/ALBCOM?locale=en";
+const PAPER_DOI_URL = "https://doi.org/10.1111/opo.70025";
 
 export function PageHeader() {
   return (
@@ -11,7 +12,17 @@ export function PageHeader() {
           <h1 className="app-title">Fixation Disparity Curve Modeling</h1>
           <p className="app-subtitle">
             Clinical curve fitting and classification for binocular vision
-            assessment.
+            assessment according to the published paper: Argilés M, Molinero X.
+            Mathematical models to describe fixation disparity curves.
+            Ophthalmic Physiol Opt. 2025;45:1642–1652.{" "}
+            <a
+              className="app-subtitle__paper-link"
+              href={PAPER_DOI_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              DOI
+            </a>
           </p>
           <div className="app-header__meta">
             <a
